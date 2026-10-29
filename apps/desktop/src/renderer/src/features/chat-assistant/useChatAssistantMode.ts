@@ -5,7 +5,8 @@ import type {
   ChatAssistantMode,
   ChatAssistantProjectRef,
   ExtrasChatTask,
-  LongBookSummary
+  LongBookSummary,
+  UserPromptAttachment
 } from "@deepwrite/contracts";
 import { chatAssistantProjectKey as projectKey } from "@deepwrite/contracts/renderer";
 import {
@@ -223,11 +224,15 @@ export function useChatAssistantMode(options: ChatAssistantModeOptions) {
     }
   }
 
-  async function sendAssistantMessage(webSearchEnabled = false): Promise<void> {
+  async function sendAssistantMessage(
+    webSearchEnabled = false,
+    attachments: UserPromptAttachment[] = []
+  ): Promise<void> {
     const task = chatTask.value;
     if (!task || !controller.value) return;
     await controller.value.sendAssistantMessage(
-      chatTaskWithWebSearch(task, webSearchEnabled)
+      chatTaskWithWebSearch(task, webSearchEnabled),
+      attachments
     );
   }
 

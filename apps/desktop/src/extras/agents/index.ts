@@ -36,7 +36,8 @@ async function handleConfigCommand(
     } else if (command.type === "extrasAgentConfig.reset") {
       payload = await configStore.reset(
         command.payload.agentId,
-        command.payload.profileId
+        command.payload.profileId,
+        command.payload.previewOnly
       );
     } else {
       return undefined;

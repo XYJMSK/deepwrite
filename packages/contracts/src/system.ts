@@ -108,7 +108,11 @@ import {
   type SubagentAuthoringDraftUpdatedEventEnvelope,
   type LibraryEditorMutationEventEnvelope,
   type WorkspaceEditorMutationEventEnvelope,
-  type WorkspaceStageSelectionEventEnvelope
+  type WorkspaceStageSelectionEventEnvelope,
+  AgentSteerCommandEnvelopeSchema,
+  AgentSteeringDeliveredEventEnvelopeSchema,
+  SessionSteerCommandEnvelopeSchema,
+  type AgentSteeringDeliveredEventEnvelope
 } from "./session";
 import {
   AgentTeamsCreateCommandEnvelopeSchema,
@@ -304,6 +308,7 @@ export const CommandEnvelopeSchema = z.discriminatedUnion("type", [
   SessionPromptCommandEnvelopeSchema,
   SessionAbortCommandEnvelopeSchema,
   SessionUserInputResponseCommandEnvelopeSchema,
+  SessionSteerCommandEnvelopeSchema,
   ModelsListCommandEnvelopeSchema,
   ModelsRefreshFreeCommandEnvelopeSchema,
   ModelsSetFreeModelEnabledCommandEnvelopeSchema,
@@ -354,6 +359,7 @@ export const CommandEnvelopeSchema = z.discriminatedUnion("type", [
   AgentPromptCommandEnvelopeSchema,
   AgentAbortCommandEnvelopeSchema,
   AgentUserInputResponseCommandEnvelopeSchema,
+  AgentSteerCommandEnvelopeSchema,
   AgentModelTestCommandEnvelopeSchema,
   AgentModelCapacityCommandEnvelopeSchema
 ]);
@@ -422,6 +428,7 @@ export const SystemEventEnvelopeSchema = z.discriminatedUnion("type", [
   AgentToolRequestedEventEnvelopeSchema,
   AgentToolCompletedEventEnvelopeSchema,
   AgentUserInputRequestedEventEnvelopeSchema,
+  AgentSteeringDeliveredEventEnvelopeSchema,
   SubagentPlannedEventEnvelopeSchema,
   SubagentStartedEventEnvelopeSchema,
   SubagentActivityEventEnvelopeSchema,
@@ -478,6 +485,7 @@ export type SystemEventEnvelope =
   | AgentToolRequestedEventEnvelope
   | AgentToolCompletedEventEnvelope
   | AgentUserInputRequestedEventEnvelope
+  | AgentSteeringDeliveredEventEnvelope
   | SubagentPlannedEventEnvelope
   | SubagentStartedEventEnvelope
   | SubagentActivityEventEnvelope

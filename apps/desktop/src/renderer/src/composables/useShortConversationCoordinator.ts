@@ -464,6 +464,20 @@ export function useShortConversationCoordinator(
     { flush: "sync" }
   );
 
+  // Queued follow-ups leave through the ordinary send path of the conversation
+  // on screen; one in the background waits until it is shown again.
+  const stopFollowUpDispatch = watch(
+    activeConversation,
+    (conversation, previous) => {
+      if (previous && previous !== conversation)
+        previous.followUps.setDispatcher(null);
+      conversation.followUps.setDispatcher((attachments) =>
+        sendMessage(attachments)
+      );
+    },
+    { immediate: true, flush: "sync" }
+  );
+
   function captureSendTarget(): ShortConversationSendTarget {
     const conversation = activeConversation.value;
     const document = options.resource.activeAgentDocument.value;
@@ -498,6 +512,7 @@ export function useShortConversationCoordinator(
       document.workspaceId === target.workspaceId &&
       document.stageId === target.stageId &&
       (options_.includeDraft === false ||
+        target.conversation.followUps.dispatching.value ||
         target.conversation.draft.value === target.draft)
     );
   }
@@ -871,6 +886,8 @@ export function useShortConversationCoordinator(
     stopResourceInvalidation();
     stopConversationError();
     stopWebSearchSync();
+    stopFollowUpDispatch();
+    activeConversation.value.followUps.setDispatcher(null);
     if (pending && conversation?.isBusy.value) {
       try {
         await conversation.stopGeneration();

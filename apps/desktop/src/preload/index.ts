@@ -201,6 +201,7 @@ import {
   queryModelUsage,
   submitUserInput
 } from "./session-models-api";
+import { steer } from "./session-steer-api";
 import { marketplace } from "./marketplace-api";
 import { agentTeamMarketplace } from "./agent-team-marketplace-api";
 
@@ -1064,7 +1065,8 @@ const api: DeepWriteApi = {
   session: {
     prompt,
     abort,
-    submitUserInput
+    submitUserInput,
+    steer
   },
   models: sessionModels,
   modelUsage: {

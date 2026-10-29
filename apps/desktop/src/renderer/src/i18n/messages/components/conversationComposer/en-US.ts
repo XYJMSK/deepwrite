@@ -24,5 +24,6 @@ export default {
   selectManuscriptEditingPermission: "Select manuscript editing permission",
   voiceInput: "Voice input",
   sendMessage: "Send message",
-  stopGeneration: "Stop generation"
+  stopGeneration: "Stop generation",
+  withdrawTooManyAttachments: "Too many attachments; some were not moved back."
 };

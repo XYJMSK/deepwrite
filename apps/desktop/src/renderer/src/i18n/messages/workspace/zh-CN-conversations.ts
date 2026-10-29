@@ -262,9 +262,14 @@ export default {
     setUpInSettings:
       "联网搜索未启用或未配置密钥，请先在设置 → 个人 → 联网搜索中开启"
   },
+  followUpQueue: {
+    steerFailed: "插入本轮失败，本轮结束后会作为新消息发送。",
+    queueIsFull: "最多排队 {count} 条。"
+  },
   history: {
     historicalAttachmentNoteOnlyAttachmentNamesWereRestoredOriginal:
       "{content}\n\n【历史附件说明】{map}。本条只恢复了附件名称，原始附件未在会话记录中保存；需要核对或引用原文、图片时，请用户重新上传。",
+    steeringNotes: "{content}\n\n【运行中补充】\n{notes}",
     theConversationHistoryExceedsTheRestorationTransferLimitIt:
       "会话历史超过恢复传输上限，未截断或发送。请从已有检查点新建会话，原对话仍保留。"
   },

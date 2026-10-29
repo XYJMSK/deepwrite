@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SavedLibraryEntry } from "../analysis-ui/preset-batch";
 import { presetLabel } from "../analysis-ui/preset-labels";
 import { createScopedTranslator } from "../../i18n";
 import { computed, ref, watch } from "vue";
@@ -24,6 +25,7 @@ const props = defineProps<{
   preset: LongBookAnalysisPreset;
   catalogSnapshot: CatalogSnapshot | null;
   saving: boolean;
+  savedEntry?: SavedLibraryEntry | undefined;
   previous?: boolean;
   context?: string;
   eyebrow?: string | undefined;
@@ -31,6 +33,7 @@ const props = defineProps<{
   targetId?: string | undefined;
 }>();
 const emit = defineEmits<{
+  openEntry: [entry: SavedLibraryEntry];
   update: [result: LongBookAnalysisResult];
   "update:targetId": [libraryId: string];
   save: [
@@ -192,6 +195,13 @@ function save(): void {
           })
         }}</small>
       </div>
+      <button
+        v-if="savedEntry"
+        type="button"
+        @click="emit('openEntry', savedEntry)"
+      >
+        {{ t("analysisUi.goToSavedEntry") }}
+      </button>
       <button
         class="analysis-primary-button"
         type="button"

@@ -8,7 +8,10 @@ import type { ConversationMessageRewriteRequest } from "../../types/conversation
 import type { WorkspaceDocument } from "../../types/workspace";
 import type { WorkspaceContextAttachments } from "./types";
 export interface SendEntrypointsOperations {
-  sendAssistantMessage(task: ExtrasChatTask): Promise<void>;
+  sendAssistantMessage(
+    task: ExtrasChatTask,
+    attachments?: UserPromptAttachment[]
+  ): Promise<void>;
   resendMessage(
     request: ConversationMessageRewriteRequest,
     activeDocument: WorkspaceDocument,

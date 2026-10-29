@@ -11,7 +11,8 @@ import { moreFeatures } from "./components/sidebarMoreFeatures";
 import asyncComponentsSource from "./components/lazyAppComponents.ts?raw";
 import featureImportsSource from "./components/lazyFeatureImports.ts?raw";
 const lazySource = `${asyncComponentsSource}\n${featureImportsSource}`;
-import composerSource from "./features/chat-assistant/ChatAssistantComposer.vue?raw";
+import composerComponentSource from "./features/chat-assistant/ChatAssistantComposer.vue?raw";
+const composerSource = composerComponentSource;
 import homeSource from "./features/chat-assistant/ChatAssistantHome.vue?raw";
 import overlayComponentSource from "./features/chat-assistant/ChatAssistantOverlay.vue?raw";
 import overlayWindowSource from "./features/chat-assistant/useChatAssistantWindow.ts?raw";
@@ -129,7 +130,7 @@ describe("independent chat assistant feature", () => {
     expect(composerSource).toContain("emit('stop')");
     expect(composerSource).toContain("chatAssistant.chatModel");
     expect(overlaySource).toContain("controller.value!.configuredModels.value");
-    expect(composerSource).toContain("chatAssistant.attachmentsComingSoon");
+    expect(composerSource).toContain("openAttachmentPicker");
     expect(composerSource).toContain("chatAssistant.voiceInput");
     expect(composerSource).toContain("<VoiceInputBar");
   });
@@ -141,7 +142,7 @@ describe("independent chat assistant feature", () => {
     expect(modelIndex).toBeGreaterThan(searchIndex);
     expect(composerSource).toContain("webSearchAvailable");
     expect(composerSource).toContain("is-active");
-    expect(composerSource).toContain("var(--accent-soft)");
+    expect(composerSource).toContain('src="./chat-assistant-composer.css"');
     expect(composerSource).toContain("chatAssistant.webSearch");
     expect(composerSource).not.toContain('<AppIcon name="search"');
     expect(webSearchSource).toContain(

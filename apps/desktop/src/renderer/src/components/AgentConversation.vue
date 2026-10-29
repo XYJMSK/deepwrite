@@ -17,6 +17,7 @@ import {
 import { resolveAgentWelcome } from "../data/agentWelcome";
 import { useConversationTextReferences } from "../composables/useConversationTextReferences";
 import type { LongWorkspaceProposalItem } from "../composables/useLongWorkspaceProposals";
+import type { FollowUpQueueController } from "../composables/agent-conversation/follow-up-queue";
 import type {
   AgentApprovalMode,
   ChatMessage,
@@ -57,6 +58,7 @@ const props = withDefaults(
       | ((request: ConversationMessageRewriteRequest) => Promise<boolean>)
       | undefined;
     canStop: boolean;
+    followUps?: FollowUpQueueController | undefined;
     runtimeAvailable: boolean;
     deferHistoryRendering?: boolean;
     models: ModelConfig[];
@@ -169,6 +171,8 @@ const {
   responding: () => props.responding,
   currentSessionId: () => props.currentSessionId,
   longProposalItems: () => props.longProposalItems,
+  pendingMessageIds: () =>
+    props.followUps?.items.value.map((item) => item.id) ?? [],
   onScroll: () => scheduleActiveConversationTurnUpdate()
 });
 const messageList = ref<HTMLElement>();
@@ -360,6 +364,7 @@ const {
           :allow-live-edit-review="allowLiveEditReview"
           :long-proposal-items="longProposalItems"
           :long-workspace-index="longWorkspaceIndex"
+          :pending-messages="followUps?.items.value"
           :welcome-content="welcomeContent"
           :show-welcome-details="
             agentWorkspaceType !== 'short' && agentWorkspaceType !== 'long'
@@ -415,6 +420,7 @@ const {
         :can-send="canSend"
         :can-send-attachments="canSendAttachments"
         :can-stop="canStop"
+        :follow-ups="followUps"
         :runtime-available="runtimeAvailable"
         :current-session-id="currentSessionId"
         :messages="messages"

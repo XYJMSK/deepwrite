@@ -97,7 +97,11 @@ function controllerFixture() {
       webSearchEnabled.value = enabled;
     }),
     selectTemperature: vi.fn(),
-    selectApprovalMode: vi.fn()
+    selectApprovalMode: vi.fn(),
+    followUps: {
+      dispatching: computed(() => false),
+      setDispatcher: vi.fn()
+    }
   } as unknown as AgentConversationController;
   return {
     controller,

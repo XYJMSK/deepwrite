@@ -39,6 +39,10 @@ export class AgentRunRegistry {
     return this.sessionRuns.get(sessionId);
   }
 
+  isExtrasRun(runId: string): boolean {
+    return this.extrasRuns.has(runId);
+  }
+
   admissionError(
     sessionId: string,
     extras: boolean

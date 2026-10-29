@@ -16,6 +16,15 @@ export default {
     methodLoading: "方法尚未加载，请稍后重试。"
   },
   analysisUi: {
+    goToSavedEntry: "前往查看",
+    discardPresetTitle: "放弃未保存的修改？",
+    discardPresetDescription: "规则有未保存的修改，退出后将丢失。",
+    continuePresetEditing: "继续编辑",
+    discardPresetChanges: "放弃修改",
+    resetPresetsTitle: "恢复全部默认规则？",
+    resetPresetsDescription: "这将替换当前草稿中的所有规则，保存后生效。",
+    confirmResetPresets: "恢复默认",
+
     modelSettings: "模型设置",
     modelField: "模型",
     closeModelSettings: "关闭模型设置",

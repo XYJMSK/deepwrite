@@ -275,6 +275,7 @@ const emit = defineEmits<{
     @expand-left="emit('expandLeft')"
   >
     <RevisionAnalysisPage
+      @open-entry="emit('openMaterialEntry', $event)"
       v-if="module.controller"
       :controller="module.controller"
       :models="module.models"
@@ -292,6 +293,7 @@ const emit = defineEmits<{
     @expand-left="emit('expandLeft')"
   >
     <ShortBookAnalysisPage
+      @open-entry="emit('openMaterialEntry', $event)"
       v-if="module.controller"
       :controller="module.controller"
       :models="module.models"
@@ -309,6 +311,7 @@ const emit = defineEmits<{
     @expand-left="emit('expandLeft')"
   >
     <LongBookAnalysisPage
+      @open-entry="emit('openMaterialEntry', $event)"
       v-if="module.controller"
       :controller="module.controller"
       :models="module.models"

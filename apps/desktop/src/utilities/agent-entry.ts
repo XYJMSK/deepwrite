@@ -2,21 +2,17 @@ import { createBookIdentityService } from "./agent-book-identity-service";
 import {
   ModelCapacityResultSchema,
   ModelConnectionTestResultSchema,
-  SessionAbortAcceptedPayloadSchema,
-  SessionUserInputResponseAcceptedPayloadSchema,
   SessionPromptAcceptedPayloadSchema,
   type CommandResult,
   type ExtrasAgentRunSpec
 } from "@deepwrite/contracts";
-import {
-  PiAgentRuntimeAdapter,
-  UserInputResolutionError
-} from "@deepwrite/pi-runtime-adapter";
+import { PiAgentRuntimeAdapter } from "@deepwrite/pi-runtime-adapter";
 import { nowIso } from "@deepwrite/shared";
 import {
   createAgentRunInput,
   createCoreCommandExecutor
 } from "./agent-run-input";
+import { handleAgentRunControl } from "./agent-run-control";
 import { AgentRunRegistry } from "./agent-run-registry";
 import { createDecompositionServices } from "./agent-decomposition-services";
 import { bootUtility } from "./runtime";
@@ -62,62 +58,8 @@ bootUtility("agent", {
       };
     }
 
-    if (command.type === "agent.abort") {
-      if (!runs.abort(command.payload.sessionId, command.payload.runId)) {
-        return {
-          status: "rejected",
-          requestId: command.id,
-          error: {
-            code: "agent.run_not_active",
-            message: "要停止的智能体运行已结束或不存在。"
-          }
-        };
-      }
-      return {
-        status: "accepted",
-        requestId: command.id,
-        payload: SessionAbortAcceptedPayloadSchema.parse({
-          sessionId: command.payload.sessionId,
-          runId: command.payload.runId,
-          abortedAt: nowIso()
-        })
-      };
-    }
-
-    if (command.type === "agent.user_input_response") {
-      if (runs.activeRun(command.payload.sessionId) !== command.payload.runId) {
-        return {
-          status: "rejected",
-          requestId: command.id,
-          error: {
-            code: "agent.run_not_active",
-            message: "要回答的智能体运行已结束或不存在。"
-          }
-        };
-      }
-      try {
-        return {
-          status: "accepted",
-          requestId: command.id,
-          payload: SessionUserInputResponseAcceptedPayloadSchema.parse(
-            runtime.resolveUserInput(command.payload)
-          )
-        };
-      } catch (error: unknown) {
-        return {
-          status: "rejected",
-          requestId: command.id,
-          error: {
-            code:
-              error instanceof UserInputResolutionError
-                ? error.code
-                : "agent.user_input_response_failed",
-            message:
-              error instanceof Error ? error.message : "提交用户回答失败。"
-          }
-        };
-      }
-    }
+    const runControl = handleAgentRunControl(command, runs, runtime);
+    if (runControl) return runControl;
 
     if (
       command.type !== "agent.prompt" &&

@@ -18,6 +18,7 @@ const FORBIDDEN_RENDERER_COMMAND_TYPES = new Set<string>([
   "longMaterialPack.core",
   "agent.abort",
   "agent.user_input_response",
+  "agent.steer",
   "agent.model_test",
   "agent.model_capacity",
   "catalog.createShortBookAtPath",

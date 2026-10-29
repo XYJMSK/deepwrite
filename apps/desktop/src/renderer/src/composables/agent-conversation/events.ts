@@ -12,6 +12,7 @@ import {
   isSubagentEvent
 } from "./event-kinds";
 import { applyContextCompactionEvent } from "./context-compaction";
+import { appendSteeringNote } from "./steering-notes";
 import { uiMessage } from "../../ui-feedback";
 import {
   completedIdleCompactionTokens,
@@ -52,6 +53,7 @@ type EventsContext = Pick<
   | "markRunStopped"
   | "conversationError"
   | "markRunError"
+  | "followUps"
 > &
   Parameters<typeof handleToolEvent>[0];
 
@@ -145,6 +147,17 @@ export function handleEvent(
   if (event.type === "agent.user_input_requested") {
     ctx.userInput.receive(event.payload);
     ctx.clearIdleTimer();
+    return;
+  }
+  if (event.type === "agent.steering_delivered") {
+    const message = ctx.ensureAssistantMessage(
+      runId,
+      event.payload.messageId,
+      event.payload.runtime,
+      event.timestamp
+    );
+    if (message) appendSteeringNote(message, event.payload);
+    ctx.followUps.markDelivered(event.payload.steerId);
     return;
   }
   if (

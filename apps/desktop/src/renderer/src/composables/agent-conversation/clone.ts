@@ -116,7 +116,14 @@ export function cloneMessage(message: ChatMessage): ChatMessage {
       : {}),
     ...(message.processingSteps
       ? {
-          processingSteps: message.processingSteps.map((step) => ({ ...step }))
+          processingSteps: message.processingSteps.map((step) =>
+            step.type === "user_note" && step.attachments
+              ? {
+                  ...step,
+                  attachments: step.attachments.map((item) => ({ ...item }))
+                }
+              : { ...step }
+          )
         }
       : {}),
     ...(message.subagentRuns

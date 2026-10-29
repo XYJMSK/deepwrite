@@ -27,7 +27,10 @@ const props = defineProps<{
   models: readonly ModelConfig[];
   catalogSnapshot: CatalogSnapshot | null;
 }>();
-const emit = defineEmits<{ refreshCatalog: [] }>();
+const emit = defineEmits<{
+  refreshCatalog: [];
+  openEntry: [entry: { libraryId: string; entryId: string }];
+}>();
 const presetManagerOpen = ref(false);
 const presetSaving = ref(false);
 const resultSaving = ref(false);
@@ -67,17 +70,6 @@ async function savePresets(next: LongBookAnalysisPreset[]): Promise<void> {
     uiMessage.error(formatError(error, t("presetSaveFailed")));
   } finally {
     presetSaving.value = false;
-  }
-}
-
-async function resetPresets(presetId?: string): Promise<void> {
-  try {
-    await props.controller.resetPresets(presetId);
-    uiMessage.success(
-      presetId ? t("defaultPresetRestored") : t("allDefaultsRestored")
-    );
-  } catch (error: unknown) {
-    uiMessage.error(formatError(error, t("restorePresetsFailed")));
   }
 }
 
@@ -170,6 +162,7 @@ onMounted(() => {
       class="analysis-result-anchor"
     >
       <AnalysisResultTabs
+        @open-entry="emit('openEntry', $event)"
         v-model:active-id="activeResultId"
         :results="controller.batch.results.value"
         :total="controller.batch.items.value.length"
@@ -187,7 +180,7 @@ onMounted(() => {
       :saving="presetSaving"
       @close="presetManagerOpen = false"
       @save="savePresets"
-      @reset="resetPresets"
+      :load-defaults="controller.loadPresetDefaults"
     />
   </AnalysisPageShell>
 </template>

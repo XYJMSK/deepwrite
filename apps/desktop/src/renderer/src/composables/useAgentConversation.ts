@@ -11,6 +11,7 @@ import { bindConversationOperations } from "./agent-conversation/bind-operations
 import { createConversationHistory } from "./agent-conversation/conversation-history";
 import { watchConversationPersistence } from "./agent-conversation/persistence-watch";
 import { createAgentUserInputController } from "./agent-conversation/user-input";
+import { createFollowUpQueue } from "./agent-conversation/follow-up-queue";
 import type {
   AgentConversationController,
   UseAgentConversationOptions
@@ -93,6 +94,7 @@ export function useAgentConversation(
       ctx.activeRunId.value !== null &&
       !ctx.stopping.value
   );
+  ctx.followUps = createFollowUpQueue(ctx);
   ctx.history = createConversationHistory({
     ...ctx,
     createdAt: ctx.currentCreatedAt,
@@ -164,6 +166,7 @@ export function useAgentConversation(
     canSendAttachments: ctx.canSendAttachments,
     canRewriteHistory: ctx.canRewriteHistory,
     canStop: ctx.canStop,
+    followUps: ctx.followUps,
     acceptsRunEvent: ctx.acceptsRunEvent,
     approvalModeForRun: ctx.approvalModeForRun,
     markToolConflict: ctx.markToolConflict,
@@ -209,6 +212,14 @@ export function useAgentConversation(
       ctx.draft.value = value;
     },
     dispose(disposeOptions): void {
+      // Unsent follow-ups go back into the saved draft rather than vanish.
+      const queuedTexts = ctx.followUps.takeTexts();
+      ctx.followUps.stop();
+      if (queuedTexts.length && !disposeOptions?.clearPersistence) {
+        ctx.draft.value = [...queuedTexts, ctx.draft.value]
+          .filter((text) => text.trim())
+          .join("\n");
+      }
       ctx.persistenceNotificationsEnabled = false;
       ctx.stopPersistenceWatch();
       // Disposing invalidates the run ownership below. Settle presentation

@@ -13,6 +13,7 @@ export function isAgentEvent(event: SystemEventEnvelope): event is Extract<
       | "agent.message_completed"
       | "agent.usage_observed"
       | "agent.user_input_requested"
+      | "agent.steering_delivered"
       | "agent.error"
       | "tool.call_stream"
       | "tool.call_requested"
@@ -34,6 +35,7 @@ export function isAgentEvent(event: SystemEventEnvelope): event is Extract<
     event.type === "agent.message_completed" ||
     event.type === "agent.usage_observed" ||
     event.type === "agent.user_input_requested" ||
+    event.type === "agent.steering_delivered" ||
     event.type === "agent.error" ||
     event.type === "tool.call_stream" ||
     event.type === "tool.call_requested" ||

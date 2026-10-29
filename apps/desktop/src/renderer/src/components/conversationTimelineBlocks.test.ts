@@ -7,6 +7,7 @@ import {
 import { parseStoredMessage } from "../composables/agent-conversation/parse-message";
 import {
   processingLabel,
+  processingSpanLabel,
   visibleResponse,
   type ProcessingDisplayItem
 } from "./conversationToolPresentation";
@@ -402,5 +403,65 @@ describe("conversation compaction placement", () => {
       { type: "compaction", compaction: { id: "old-idle" } }
     ]);
     expect(visibleResponse(item)).toBe("最终回答");
+  });
+
+  it("keeps a message sent during the reply in view once it ends", () => {
+    const item = message("streaming");
+    item.processingSteps!.push(
+      {
+        id: "note:steer-one",
+        type: "user_note",
+        noteId: "steer-one",
+        content: "到开始写正文之前停止",
+        createdAt: at(30)
+      },
+      {
+        id: "thinking-b",
+        type: "thinking",
+        content: "收到，调整计划",
+        createdAt: at(31)
+      },
+      {
+        id: "response-final",
+        type: "response",
+        content: "最终回答",
+        createdAt: at(80)
+      }
+    );
+    // While it runs, the bubble sits in the live list where it landed.
+    expect(conversationTimelineBlocks(item).map((block) => block.kind)).toEqual(
+      ["processing"]
+    );
+
+    item.status = "completed";
+    item.processingCompletedAt = at(90);
+    const blocks = conversationTimelineBlocks(item);
+    expect(blocks.map((block) => block.kind)).toEqual([
+      "processing",
+      "note",
+      "processing"
+    ]);
+    expect(blocks[0]).toMatchObject({
+      id: "processing:assistant-one",
+      startedAt: at(0),
+      endedAt: at(30),
+      segment: true
+    });
+    expect(blocks[1]?.items).toMatchObject([
+      { type: "user_note", content: "到开始写正文之前停止" }
+    ]);
+    expect(blocks[2]).toMatchObject({ startedAt: at(30), endedAt: at(90) });
+    expect(processingSpanLabel(blocks[0]!.startedAt, blocks[0]!.endedAt)).toBe(
+      processingSpanLabel(at(60), at(90))
+    );
+    expect(visibleResponse(item)).toBe("最终回答");
+
+    // Nothing after the note but the answer: no empty summary follows it.
+    item.processingSteps = item.processingSteps!.filter(
+      (step) => step.id !== "thinking-b"
+    );
+    expect(conversationTimelineBlocks(item).map((block) => block.kind)).toEqual(
+      ["processing", "note"]
+    );
   });
 });

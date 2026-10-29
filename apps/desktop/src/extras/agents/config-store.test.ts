@@ -39,6 +39,41 @@ afterEach(async () => {
 });
 
 describe("extras agent config store", () => {
+  it.each([
+    "short-book-analysis",
+    "long-book-analysis",
+    "long-book-decomposition"
+  ] as const)(
+    "previews %s defaults without writing or replacing saved settings",
+    async (agentId) => {
+      const { path, store } = await createStore();
+      const initial = await store.list(agentId);
+      await store.save(
+        ExtrasAgentSettingsInputSchema.parse({
+          agentId,
+          profiles: initial.profiles.map(
+            ({ builtin: _builtin, ...profile }) => ({
+              ...profile,
+              name: `Edited ${profile.name}`
+            })
+          )
+        })
+      );
+      const configPath = join(
+        path,
+        "config",
+        "extras-agents",
+        `${agentId}.json`
+      );
+      const before = await readFile(configPath, "utf8");
+      const defaults = await store.reset(agentId, undefined, true);
+      expect(defaults.profiles.map((profile) => profile.name)).toEqual(
+        initial.profiles.map((profile) => profile.name)
+      );
+      expect(await readFile(configPath, "utf8")).toBe(before);
+      expect((await store.list(agentId)).profiles[0]!.name).toContain("Edited");
+    }
+  );
   it("provides the built-in profiles of every extras agent", async () => {
     const { store } = await createStore();
     const long = await store.list("long-book-analysis");

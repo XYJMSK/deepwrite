@@ -32,6 +32,10 @@ import type {
 
 import type { AgentConversationOperations } from "./operations";
 import type { AgentUserInputController } from "./user-input";
+import type {
+  FollowUpQueueController,
+  QueuedDispatch
+} from "./follow-up-queue";
 
 import {
   createTrackedMessages,
@@ -100,11 +104,14 @@ export interface AgentConversationState {
   pendingSubagentTextDeltas: Map<string, PendingSubagentTextDelta>;
   streamPresentationFrame: number | undefined;
   streamPresentationFallbackTimer: number | undefined;
+  /** Set while a queued follow-up is sent instead of the draft. */
+  queuedDispatch: QueuedDispatch | null;
 }
 
 export type AgentConversationContext = AgentConversationState &
   AgentConversationOperations & {
     userInput: AgentUserInputController;
+    followUps: FollowUpQueueController;
     persistenceJournal: ConversationPersistenceJournal;
     stopPersistenceWatch(): void;
     stopGeneration(): Promise<boolean>;
@@ -206,6 +213,7 @@ export function createAgentConversationState(
     pendingAgentTextDelta: undefined,
     pendingSubagentTextDeltas: new Map(),
     streamPresentationFrame: undefined,
-    streamPresentationFallbackTimer: undefined
+    streamPresentationFallbackTimer: undefined,
+    queuedDispatch: null
   };
 }

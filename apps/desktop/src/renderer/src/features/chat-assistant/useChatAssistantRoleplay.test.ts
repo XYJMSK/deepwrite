@@ -51,11 +51,14 @@ describe("roleplay chat selection", () => {
     );
     // Roleplay never searches the web, even when the toggle is on.
     await mode.sendAssistantMessage(true);
-    expect(send).toHaveBeenLastCalledWith({
-      agentId: "chat-roleplay",
-      profileId: "a",
-      input: {}
-    });
+    expect(send).toHaveBeenLastCalledWith(
+      {
+        agentId: "chat-roleplay",
+        profileId: "a",
+        input: {}
+      },
+      []
+    );
     busy.value = true;
     expect(mode.selectRole("b")).toBe(false);
     expect(mode.setMode("normal")).toBe(false);
@@ -78,10 +81,13 @@ describe("roleplay chat selection", () => {
       "assistant-chat:normal"
     );
     await restored.sendAssistantMessage(true);
-    expect(send).toHaveBeenLastCalledWith({
-      agentId: "chat-normal",
-      profileId: "default",
-      input: { webSearchEnabled: true }
-    });
+    expect(send).toHaveBeenLastCalledWith(
+      {
+        agentId: "chat-normal",
+        profileId: "default",
+        input: { webSearchEnabled: true }
+      },
+      []
+    );
   });
 });

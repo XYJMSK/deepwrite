@@ -35,6 +35,7 @@ import {
 } from "@deepwrite/contracts";
 
 import { browserId, invokeCommand } from "./invoke";
+import { steer } from "./session-steer-api";
 
 export async function prompt(
   rawPayload: SessionPromptCommandPayload
@@ -201,7 +202,8 @@ export async function queryModelUsage(
 export const session: DeepWriteApi["session"] = {
   prompt,
   abort,
-  submitUserInput
+  submitUserInput,
+  steer
 };
 
 export const models: DeepWriteApi["models"] = {

@@ -235,7 +235,8 @@ export type ExtrasAgentSettingsInputOf<A extends ExtrasAgentId> = Extract<
 
 export const ExtrasAgentSettingsResetInputSchema = z.object({
   agentId: ExtrasAgentIdSchema,
-  profileId: ExtrasAgentProfileIdSchema.optional()
+  profileId: ExtrasAgentProfileIdSchema.optional(),
+  previewOnly: z.boolean().optional()
 });
 export type ExtrasAgentSettingsResetInput = z.infer<
   typeof ExtrasAgentSettingsResetInputSchema

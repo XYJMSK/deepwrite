@@ -76,6 +76,7 @@ export interface LongBookAnalysisController {
   loadPresets(): Promise<void>;
   savePresets(presets: readonly LongBookAnalysisPreset[]): Promise<void>;
   resetPresets(presetId?: string): Promise<void>;
+  loadPresetDefaults(): Promise<LongBookAnalysisPreset[]>;
   loadSavedSources(): Promise<void>;
   loadSavedSource(sourceId: string): Promise<boolean>;
   deleteSavedSource(sourceId: string): Promise<void>;
@@ -237,13 +238,13 @@ export function useLongBookAnalysis(options: {
   ): Promise<void> {
     const entry = batch.results.value.find((item) => item.id === id);
     if (!entry) throw new Error(t("noResultToSave"));
-    await persistAnalysisResult(
+    const saved = await persistAnalysisResult(
       api(),
       entry.preset.output,
       entry.result,
       input
     );
-    batch.markSaved(id);
+    batch.markSaved(id, { libraryId: input.libraryId, entryId: saved.id });
   }
 
   return {
@@ -260,6 +261,14 @@ export function useLongBookAnalysis(options: {
     loadPresets,
     savePresets,
     resetPresets,
+    loadPresetDefaults: async () =>
+      (
+        await api().extrasAgents.profiles.reset(
+          "long-book-analysis",
+          undefined,
+          true
+        )
+      ).profiles,
     start,
     async stop() {
       if (!batch.isBusy.value) return false;

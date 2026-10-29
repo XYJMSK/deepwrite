@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { presetLabel } from "../analysis-ui/preset-labels";
 import { createScopedTranslator } from "../../i18n";
-import { nextTick, ref, useId, watch } from "vue";
+import { computed, nextTick, ref, useId, watch } from "vue";
 import type { LongBookAnalysisPreset } from "@deepwrite/contracts/renderer";
 import { createId } from "@deepwrite/shared";
 import PresetManagerShell from "../analysis-ui/PresetManagerShell.vue";
@@ -11,6 +11,7 @@ import {
   MATERIAL_KIND_LABELS,
   SKILL_KIND_LABELS
 } from "../../data/catalogWorkspace";
+import { usePresetDraft } from "../analysis-ui/usePresetDraft";
 import { cloneLongBookAnalysisPreset } from "./preset-draft";
 
 const t = createScopedTranslator("extras");
@@ -20,25 +21,31 @@ const props = defineProps<{
   open: boolean;
   presets: readonly LongBookAnalysisPreset[];
   saving: boolean;
+  loadDefaults: () => Promise<PresetDraft[]>;
 }>();
 const emit = defineEmits<{
   close: [];
   save: [presets: LongBookAnalysisPreset[]];
-  reset: [presetId?: string];
 }>();
 
 type PresetDraft = LongBookAnalysisPreset & {
   selectionMode?: "single" | "multiple";
 };
-const draft = ref<PresetDraft[]>([]);
+const shell = ref<InstanceType<typeof PresetManagerShell> | null>(null);
+const { draft, dirty, resetting, reset, snapshot } =
+  usePresetDraft<PresetDraft>({
+    open: () => props.open,
+    presets: () => props.presets,
+    loadDefaults: () => props.loadDefaults()
+  });
+const busy = computed(() => props.saving || resetting.value);
 const expandedId = ref<string | null>(null);
 const editorId = useId();
 const draggedIndex = ref<number | null>(null);
 
 watch(
-  () => [props.open, props.presets] as const,
-  ([open]) => {
-    if (open) draft.value = props.presets.map(cloneLongBookAnalysisPreset);
+  () => props.open,
+  () => {
     expandedId.value = null;
     draggedIndex.value = null;
   },
@@ -115,6 +122,10 @@ async function editPreset(id: string): Promise<void> {
 
 <template>
   <PresetManagerShell
+    ref="shell"
+    :dirty="dirty"
+    :busy="busy"
+    @reset="reset()"
     :open="open"
     :title="t('longBookAnalysis.presetManagement')"
     :description="
@@ -127,17 +138,17 @@ async function editPreset(id: string): Promise<void> {
     :close-label="t('cloudBackup.close')"
     @close="emit('close')"
   >
-    <div class="preset-toolbar">
+    <div class="preset-toolbar" :inert="busy">
       <button type="button" :disabled="draft.length >= 50" @click="addPreset">
         {{ t("longBookAnalysis.addPreset") }}
       </button>
-      <button type="button" @click="emit('reset')">
+      <button type="button" @click="shell?.requestReset()">
         {{ t("longBookAnalysis.restoreAllDefaults") }}
       </button>
       <small>{{ t("longBookAnalysis.presetEditingHelp") }}</small>
       <span>{{ draft.length }} / 50</span>
     </div>
-    <div class="preset-list">
+    <div class="preset-list" :inert="busy">
       <article
         v-for="(preset, index) in draft"
         :key="preset.id"
@@ -212,7 +223,7 @@ async function editPreset(id: string): Promise<void> {
             <button
               v-if="preset.builtin"
               type="button"
-              @click="emit('reset', preset.id)"
+              @click="reset(preset.id)"
             >
               {{ t("longBookAnalysis.restoreDefault") }}
             </button>
@@ -234,15 +245,15 @@ async function editPreset(id: string): Promise<void> {
         />
       </article>
     </div>
-    <template #footer>
-      <button type="button" @click="emit('close')">
+    <template #footer="{ requestClose }">
+      <button type="button" @click="requestClose">
         {{ t("cloudBackup.cancel") }}
       </button>
       <button
         class="analysis-primary-button"
         type="button"
-        :disabled="saving"
-        @click="emit('save', draft)"
+        :disabled="busy"
+        @click="!busy && emit('save', snapshot())"
       >
         {{
           saving

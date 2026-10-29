@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatError } from "../../i18n/errors";
+import { getErrorDetail } from "../../i18n/errors";
 import { createScopedTranslator, locale } from "../../i18n";
 import { computed, ref, onMounted, watch } from "vue";
 import AppIcon from "../../components/AppIcon.vue";
@@ -56,7 +56,7 @@ async function act(action: () => unknown) {
     await action();
   } catch (error) {
     uiMessage.warning(
-      formatError(error, t("shortBookAnalysis.sourceOperationFailed"))
+      getErrorDetail(error) ?? t("shortBookAnalysis.sourceOperationFailed")
     );
   }
 }

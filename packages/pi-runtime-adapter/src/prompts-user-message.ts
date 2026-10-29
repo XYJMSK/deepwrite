@@ -61,3 +61,13 @@ export function rawUserMessageContent(
   const images = imageContentBlocks(input);
   return images.length ? [{ type: "text", text }, ...images] : text;
 }
+
+/** A message the user added while the run was working, injected mid-run. */
+export function buildSteeringUserText(input: RawUserTurn): string {
+  return [
+    "【运行中用户补充】",
+    "用户在你工作过程中追加了下面的要求。已经执行的工具调用不会撤销；请据此调整接下来的步骤，与先前要求冲突时以这条为准。",
+    "",
+    buildRawUserText(input)
+  ].join("\n");
+}

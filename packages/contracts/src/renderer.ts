@@ -411,6 +411,7 @@ export {
   SUBAGENT_DRAW_QUESTION_ID,
   SUBAGENT_DRAW_REJECT_OPTION_ID
 } from "./session/user-input";
+export { SESSION_STEER_MAX_PER_RUN } from "./session/steering";
 export {
   PROMPT_ATTACHMENT_MAX_ITEMS,
   PROMPT_IMAGE_ATTACHMENTS_MAX_BYTES,

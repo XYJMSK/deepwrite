@@ -19,7 +19,9 @@ import type {
   SessionUserInputResponseAcceptedPayload,
   SessionUserInputResponsePayload,
   SessionPromptAcceptedPayload,
-  SessionPromptCommandPayload
+  SessionPromptCommandPayload,
+  SessionSteerAcceptedPayload,
+  SessionSteerCommandPayload
 } from "./session";
 import type { ModelPreloadApi } from "./model-preload-api";
 import type { ModelUsageDashboard, ModelUsageQueryInput } from "./model-usage";
@@ -363,6 +365,10 @@ export interface DeepWriteApi extends TextContextMenuPreloadApi {
     submitUserInput(
       payload: SessionUserInputResponsePayload
     ): Promise<SessionUserInputResponseAcceptedPayload>;
+    /** Injects a message into the active run before its next model call. */
+    steer(
+      payload: SessionSteerCommandPayload
+    ): Promise<SessionSteerAcceptedPayload>;
   };
   models: ModelPreloadApi;
   modelUsage: {

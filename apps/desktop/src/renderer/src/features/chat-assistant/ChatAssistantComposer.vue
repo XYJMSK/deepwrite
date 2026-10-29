@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { createScopedTranslator } from "../../i18n";
-import { ref } from "vue";
-import type { ThinkingLevel } from "@deepwrite/contracts/renderer";
+import { computed, ref } from "vue";
+import {
+  maxTextAttachmentCharactersForBudget,
+  type ThinkingLevel,
+  type UserPromptAttachment
+} from "@deepwrite/contracts/renderer";
+import { useConversationAttachments } from "../../composables/useConversationAttachments";
+import { useAttachmentDrop } from "../../composables/useAttachmentDrop";
+import { PROMPT_ATTACHMENT_ACCEPT } from "../../utils/promptAttachments";
+import { conversationPromptError } from "../../utils/conversationPromptBudget";
+import { uiMessage } from "../../ui-feedback";
+import PromptAttachmentList from "../../components/PromptAttachmentList.vue";
 import ContextCompactionButton from "../../components/ContextCompactionButton.vue";
 import VoiceInputBar from "../../components/VoiceInputBar.vue";
 import { useVoiceInput } from "../../composables/useVoiceInput";
@@ -13,6 +23,7 @@ import PopupSelect, {
 } from "../../components/PopupSelect.vue";
 
 const t = createScopedTranslator("extras");
+const attachmentT = createScopedTranslator("components.conversationComposer");
 
 const settingsStore = useSettingsStore();
 
@@ -23,6 +34,7 @@ const props = defineProps<{
   runtimeAvailable: boolean;
   busy: boolean;
   canSend: boolean;
+  canSendAttachments: boolean;
   canStop: boolean;
   selectedModelId: string;
   modelOptions: PopupSelectOption[];
@@ -36,7 +48,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:draft": [value: string];
-  send: [];
+  send: [attachments: UserPromptAttachment[]];
   stop: [];
   selectModel: [modelId: string];
   selectThinking: [level: ThinkingLevel];
@@ -44,14 +56,73 @@ const emit = defineEmits<{
 }>();
 
 const input = ref<HTMLTextAreaElement | null>(null);
+const {
+  attachmentInput,
+  pendingAttachments,
+  readingAttachments,
+  openAttachmentPicker,
+  addAttachmentFiles,
+  handleAttachmentChange,
+  handleComposerPaste,
+  removePendingAttachment
+} = useConversationAttachments({
+  currentSessionId: () => props.sessionId ?? "",
+  closeReferenceMenu: () => {},
+  textAttachmentMaxCharacters: () =>
+    settingsStore.generalSettings.textAttachmentMaxCharacters,
+  textAttachmentsTotalMaxCharacters: () =>
+    maxTextAttachmentCharactersForBudget(
+      settingsStore.generalSettings.contextCompaction.budgetTokens
+    )
+});
+const canSubmit = computed(
+  () =>
+    props.runtimeAvailable &&
+    !props.busy &&
+    !readingAttachments.value &&
+    (props.canSend ||
+      (props.canSendAttachments && pendingAttachments.value.length > 0))
+);
+const {
+  draggingFiles,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop
+} = useAttachmentDrop({
+  canReceive: () =>
+    props.runtimeAvailable && !props.busy && !readingAttachments.value,
+  addFiles: addAttachmentFiles,
+  closeReferenceMenu: () => {}
+});
+function submit(): void {
+  if (!canSubmit.value) return;
+  const attachments = pendingAttachments.value.map((attachment) => ({
+    ...attachment
+  }));
+  const error = conversationPromptError(
+    props.draft,
+    settingsStore.generalSettings.contextCompaction.budgetTokens,
+    attachments
+  );
+  if (error) {
+    uiMessage.warning(error);
+    return;
+  }
+  pendingAttachments.value = [];
+  emit("send", attachments);
+}
+function paste(event: ClipboardEvent): void {
+  if (props.runtimeAvailable && !props.busy) handleComposerPaste(event);
+}
 const voice = useVoiceInput({
   sessionKey: () => props.sessionId ?? "",
   draft: () => props.draft,
   input,
   updateDraft: (value) => emit("update:draft", value),
   canStart: () => props.runtimeAvailable && !props.busy,
-  canSend: () => props.canSend && props.runtimeAvailable && !props.busy,
-  send: () => emit("send")
+  canSend: () => canSubmit.value,
+  send: submit
 });
 
 function focus(): void {
@@ -65,7 +136,7 @@ function handleInput(event: Event): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
   event.preventDefault();
-  if (props.canSend && !voice.active.value) emit("send");
+  if (!voice.active.value) submit();
 }
 
 function handleThinking(value: PopupSelectValue): void {
@@ -84,7 +155,29 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <footer class="chat-assistant-composer">
+  <footer
+    class="chat-assistant-composer"
+    :class="{ 'is-file-drag-over': draggingFiles }"
+    @dragenter="handleDragEnter"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
+  >
+    <input
+      ref="attachmentInput"
+      class="composer-file-input"
+      type="file"
+      multiple
+      :accept="PROMPT_ATTACHMENT_ACCEPT"
+      tabindex="-1"
+      aria-hidden="true"
+      @change="handleAttachmentChange"
+    />
+    <PromptAttachmentList
+      :pending-attachments="pendingAttachments"
+      :reading-attachments="readingAttachments"
+      @remove="removePendingAttachment"
+    />
     <textarea
       ref="input"
       :value="draft"
@@ -97,6 +190,7 @@ defineExpose({ focus });
       rows="1"
       @input="handleInput"
       @keydown="handleKeydown"
+      @paste="paste"
     />
     <VoiceInputBar
       v-if="voice.active.value"
@@ -113,9 +207,10 @@ defineExpose({ focus });
       <button
         class="chat-assistant-placeholder-action"
         type="button"
-        disabled
-        :title="t('chatAssistant.attachmentsComingSoon')"
-        :aria-label="t('chatAssistant.attachmentsComingSoon')"
+        :disabled="!runtimeAvailable || busy || readingAttachments"
+        :title="attachmentT('uploadTXTMDPDFWordDocxOrImages')"
+        :aria-label="attachmentT('uploadAttachment')"
+        @click="openAttachmentPicker"
       >
         <AppIcon name="plus" :size="19" />
       </button>
@@ -189,8 +284,8 @@ defineExpose({ focus });
         class="chat-assistant-send"
         type="button"
         :aria-label="t('chatAssistant.sendMessage')"
-        :disabled="!canSend"
-        @click="emit('send')"
+        :disabled="!canSubmit"
+        @click="submit"
       >
         <AppIcon name="arrow-up" :size="19" />
       </button>
@@ -198,90 +293,4 @@ defineExpose({ focus });
   </footer>
 </template>
 
-<style scoped>
-.chat-assistant-composer {
-  container-type: inline-size;
-  position: relative;
-  margin: 0 12px 12px;
-  padding: 10px 12px 8px;
-  background: var(--surface-raised);
-  border: 1px solid var(--theme-line);
-  border-radius: 22px;
-  box-shadow: 0 8px 24px color-mix(in srgb, #000 7%, transparent);
-}
-.chat-assistant-composer textarea {
-  display: block;
-  width: 100%;
-  min-height: 42px;
-  max-height: 150px;
-  resize: none;
-  padding: 8px 10px;
-  color: var(--text-primary);
-  font: inherit;
-  line-height: 1.5;
-  background: transparent;
-  border: 0;
-  outline: 0;
-}
-.chat-assistant-composer textarea::placeholder {
-  color: var(--text-tertiary);
-}
-.chat-assistant-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.chat-assistant-toolbar-spacer {
-  flex: 1;
-}
-.chat-assistant-placeholder-action,
-.chat-assistant-web-search {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-  padding: 0 10px;
-  gap: 5px;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
-  font: inherit;
-  white-space: nowrap;
-}
-.chat-assistant-placeholder-action {
-  width: 34px;
-  padding: 0;
-}
-.chat-assistant-web-search:not(:disabled):hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-}
-.chat-assistant-web-search.is-active {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.chat-assistant-placeholder-action:disabled,
-.chat-assistant-web-search:disabled {
-  opacity: 0.42;
-}
-.chat-assistant-send {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  color: var(--surface-main);
-  background: var(--text-primary);
-  border: 0;
-  border-radius: 50%;
-}
-.chat-assistant-send:disabled {
-  opacity: 0.35;
-}
-.chat-assistant-send.is-stop {
-  color: var(--text-primary);
-  background: var(--surface-selected);
-}
-</style>
+<style scoped src="./chat-assistant-composer.css"></style>

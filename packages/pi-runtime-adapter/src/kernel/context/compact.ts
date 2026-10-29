@@ -195,7 +195,8 @@ export async function compactMessages(
       Math.floor(estimateMessagesTokens(pruned.messages) * 0.5)
     ),
     (message) => state.isRunStart(message),
-    request.allowSplitTurn
+    request.allowSplitTurn,
+    (message) => state.isMidRunMessage(message)
   );
   if (!cut) return pruneOutcome;
 

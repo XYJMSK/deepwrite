@@ -72,6 +72,7 @@ type SendMessageContext = Pick<
   | "rememberRunApprovalMode"
   | "activeRunId"
   | "markRunError"
+  | "queuedDispatch"
 >;
 export async function sendMessage(
   ctx: SendMessageContext,
@@ -98,9 +99,12 @@ export async function sendMessage(
         ...attachment
       }));
   const requestChatTask = chatTask ? cloneChatTask(chatTask) : undefined;
+  // A queued follow-up brings its own words; the draft may hold the next one.
+  const queued = preparedRewrite ? null : ctx.queuedDispatch;
   const content =
     preparedRewrite?.content ??
-    (ctx.draft.value.trim() ||
+    (queued?.content ||
+      ctx.draft.value.trim() ||
       (requestAttachments.length
         ? t("pleaseReadAndAnalyzeTheAttachmentsIUploaded")
         : ""));
@@ -218,7 +222,8 @@ export async function sendMessage(
       ctx.messages.value.splice(persistenceRetryIndex, 1, userMessage);
     else ctx.messages.value.push(userMessage);
     pendingAssistantId = createPendingAssistantMessage(ctx).id;
-    ctx.draft.value = "";
+    if (queued) queued.markSent();
+    else ctx.draft.value = "";
   }
   ctx.unconfirmedUserMessageId = userMessage.id;
   ctx.conversationError.value = null;
@@ -375,7 +380,11 @@ export async function sendMessage(
       discardPendingAssistantMessage(ctx, pendingAssistantId);
       return;
     }
-    if (ctx.unconfirmedUserMessageId === userMessage.id && !ctx.draft.value) {
+    if (queued) queued.failed = true;
+    else if (
+      ctx.unconfirmedUserMessageId === userMessage.id &&
+      !ctx.draft.value
+    ) {
       ctx.draft.value = content;
     }
     const messageText = formatError(

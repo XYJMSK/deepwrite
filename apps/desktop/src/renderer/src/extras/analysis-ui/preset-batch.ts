@@ -43,12 +43,18 @@ export interface PresetBatchItem<P, R> {
   failure: string | null;
 }
 
+export interface SavedLibraryEntry {
+  libraryId: string;
+  entryId: string;
+}
+
 export interface PresetBatchResult<P, R> {
   readonly id: string;
   readonly preset: P;
   readonly order: number;
   result: R;
   saved: boolean;
+  savedEntry?: SavedLibraryEntry;
 }
 
 export interface PresetBatchCounts {
@@ -87,7 +93,7 @@ export interface PresetBatch<P, R> {
   settle(): void;
   clear(): void;
   updateResult(id: string, result: R): void;
-  markSaved(id: string): void;
+  markSaved(id: string, savedEntry?: SavedLibraryEntry): void;
   handleEvent(event: SystemEventEnvelope): void;
   dispose(): void;
 }
@@ -382,9 +388,12 @@ export function createPresetBatch<P extends { id: string }, R>(
       const entry = results.value.find((existing) => existing.id === id);
       if (entry) entry.result = result;
     },
-    markSaved(id) {
+    markSaved(id, savedEntry) {
       const entry = results.value.find((existing) => existing.id === id);
-      if (entry) entry.saved = true;
+      if (entry) {
+        entry.saved = true;
+        if (savedEntry) entry.savedEntry = savedEntry;
+      }
     },
     handleEvent(event) {
       for (const item of items.value) item.runner.handleEvent(event);

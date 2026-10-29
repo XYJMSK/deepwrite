@@ -64,6 +64,89 @@ describe("session user-input commands", () => {
   });
 });
 
+describe("session steering commands", () => {
+  const payload = {
+    sessionId: "session_running",
+    runId: "run_running",
+    steerId: "steer_rename",
+    message: "主角改名林舟"
+  };
+  const command = CommandEnvelopeSchema.parse(
+    createEnvelope("session.steer", payload, {
+      id: "command_steer",
+      context: {
+        correlationId: "command_steer",
+        sessionId: payload.sessionId,
+        runId: payload.runId
+      }
+    })
+  );
+  const settingsStore = (budgetTokens: number) => ({
+    list: async () => ({ settings: { contextCompaction: { budgetTokens } } })
+  });
+
+  it("forwards a steer to the Agent that owns the run", async () => {
+    const requestCommand = vi.fn(async () => ({
+      status: "accepted" as const,
+      requestId: command.id,
+      payload: { ...payload, acceptedAt: "2026-10-28T08:00:00.000Z" }
+    }));
+    const ctx = {
+      activeRuns: new Map(),
+      supervisor: { requestCommand },
+      requireGeneralSettingsStore: () => settingsStore(64_000)
+    } as unknown as IpcCommandContext;
+
+    await expect(handleSessionCommands(ctx, command)).resolves.toMatchObject({
+      status: "accepted",
+      payload: { steerId: payload.steerId }
+    });
+    expect(requestCommand).toHaveBeenCalledWith(
+      "agent",
+      expect.objectContaining({ type: "agent.steer", payload }),
+      10_000
+    );
+  });
+
+  it("rejects a steer over the prompt budget before reaching the Agent", async () => {
+    const requestCommand = vi.fn();
+    const ctx = {
+      activeRuns: new Map(),
+      supervisor: { requestCommand },
+      requireGeneralSettingsStore: () => settingsStore(1)
+    } as unknown as IpcCommandContext;
+
+    await expect(handleSessionCommands(ctx, command)).resolves.toMatchObject({
+      status: "rejected",
+      error: { code: "session.prompt_budget_exceeded" }
+    });
+    expect(requestCommand).not.toHaveBeenCalled();
+  });
+
+  it("rejects an Agent receipt for a different steer", async () => {
+    const ctx = {
+      activeRuns: new Map(),
+      supervisor: {
+        requestCommand: vi.fn(async () => ({
+          status: "accepted" as const,
+          requestId: command.id,
+          payload: {
+            ...payload,
+            steerId: "steer_other",
+            acceptedAt: "2026-10-28T08:00:00.000Z"
+          }
+        }))
+      },
+      requireGeneralSettingsStore: () => settingsStore(64_000)
+    } as unknown as IpcCommandContext;
+
+    await expect(handleSessionCommands(ctx, command)).resolves.toMatchObject({
+      status: "rejected",
+      error: { code: "ipc.invalid_agent_steer_result" }
+    });
+  });
+});
+
 const searchSettings = {
   providerId: "deepseek" as const,
   baseUrl: "https://search.example.test",

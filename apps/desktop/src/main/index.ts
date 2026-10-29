@@ -354,6 +354,7 @@ type AgentEventEnvelope = Extract<
       | "agent.usage_observed"
       | "agent.error"
       | "agent.user_input_requested"
+      | "agent.steering_delivered"
       | "tool.call_stream"
       | "tool.call_requested"
       | "tool.execution_completed"
@@ -385,6 +386,7 @@ function isAgentEvent(event: SystemEventEnvelope): event is AgentEventEnvelope {
     event.type === "agent.usage_observed" ||
     event.type === "agent.error" ||
     event.type === "agent.user_input_requested" ||
+    event.type === "agent.steering_delivered" ||
     event.type === "tool.call_stream" ||
     event.type === "tool.call_requested" ||
     event.type === "tool.execution_completed" ||
@@ -1087,6 +1089,7 @@ function registerIpc(): void {
         command.type === "agent.extras_run" ||
         command.type === "agent.abort" ||
         command.type === "agent.user_input_response" ||
+        command.type === "agent.steer" ||
         command.type === "agent.model_test" ||
         command.type === "agent.model_capacity" ||
         command.type === "catalog.createShortBookAtPath" ||

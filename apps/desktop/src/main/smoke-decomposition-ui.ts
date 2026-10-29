@@ -1,3 +1,4 @@
+import { presetProtectionUiSmoke } from "./smoke-preset-protection-renderer";
 import type { BrowserWindow } from "electron";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -35,5 +36,16 @@ export async function runDecompositionUiSmoke(window: BrowserWindow) {
       (await window.capturePage()).toPNG()
     );
   }
-  return { status: "ok", views: results };
+  const presetProtection = await runPresetProtectionSmoke(window);
+  return { status: "ok", views: results, presetProtection };
+}
+
+export async function runPresetProtectionSmoke(window: BrowserWindow) {
+  if (process.env.DEEPWRITE_SMOKE !== "1")
+    throw new Error("Preset UI smoke requires an isolated profile.");
+  window.showInactive();
+  window.webContents.setBackgroundThrottling(false);
+  return window.webContents.executeJavaScript(
+    `(${presetProtectionUiSmoke.toString()})()`
+  );
 }

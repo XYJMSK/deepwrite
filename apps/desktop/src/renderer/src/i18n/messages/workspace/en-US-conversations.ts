@@ -279,9 +279,14 @@ export default {
     setUpInSettings:
       "Web search is off or has no key. Turn it on under Settings > Personal > Web search"
   },
+  followUpQueue: {
+    steerFailed: "Could not add it to this reply; it will be sent next.",
+    queueIsFull: "Up to {count} queued messages."
+  },
   history: {
     historicalAttachmentNoteOnlyAttachmentNamesWereRestoredOriginal:
       "{content}\n\n[Historical attachment note] {map}. Only attachment names were restored. Original attachments were not saved in the conversation history. Ask the user to upload them again when checking or citing original text or images.",
+    steeringNotes: "{content}\n\n[Added during the reply]\n{notes}",
     theConversationHistoryExceedsTheRestorationTransferLimitIt:
       "The conversation history exceeds the restoration transfer limit. It was neither truncated nor sent. Start a new conversation from an existing checkpoint. The original conversation is preserved."
   },

@@ -16,9 +16,11 @@ export interface ExtrasAgentApi {
     save<A extends ExtrasAgentId>(
       input: ExtrasAgentSettingsInputOf<A>
     ): Promise<ExtrasAgentSettingsOf<A>>;
+    /** With previewOnly, returns built-in defaults without changing saved settings. */
     reset<A extends ExtrasAgentId>(
       agentId: A,
-      profileId?: string
+      profileId?: string,
+      previewOnly?: boolean
     ): Promise<ExtrasAgentSettingsOf<A>>;
   };
 }

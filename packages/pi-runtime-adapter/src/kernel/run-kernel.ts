@@ -44,6 +44,7 @@ import { assertAttachmentsSupported, resolveRunModel } from "./run-model";
 import type { AgentRunPlan } from "./run-plan";
 import { ToolDeltaStream } from "./tool-delta-stream";
 import { createRequiredOutputGuard } from "./required-output-guard";
+import { createRunSteering, type RunSteeringRegistry } from "./run-steering";
 
 export interface AgentRunKernelOptions {
   idleTimeoutMs: number;
@@ -52,6 +53,8 @@ export interface AgentRunKernelOptions {
   retryPolicy: AgentTurnRetryPolicyOptions | undefined;
   agents: ConversationAgentCache;
   userInputBroker: AgentUserInputBroker;
+  /** Where Agent Utility steering commands find this run; optional in tests. */
+  steering?: RunSteeringRegistry;
   describe(config?: AgentProviderRuntimeConfig): AgentRuntimeRef;
 }
 
@@ -148,6 +151,18 @@ export class AgentRunKernel {
       streamFn: interceptedStreamFn
     });
     prepared = agent;
+    const steering = createRunSteering({
+      agent,
+      sessionId: target.sessionId,
+      runId: target.runId,
+      messageId,
+      runtime,
+      emit: (event) => emit(event),
+      onDelivered: (message) =>
+        contextManager?.state.midRunMessages.add(message)
+    });
+    const unregisterSteering =
+      this.options.steering?.register(target.runId, steering) ?? (() => {});
     const outputGuard = plan.requiredOutputTool
       ? createRequiredOutputGuard(agent, plan.requiredOutputTool)
       : undefined;
@@ -221,6 +236,8 @@ export class AgentRunKernel {
         return;
       }
       settled = true;
+      steering.close();
+      unregisterSteering();
       lifecycle.clearIdleTimer();
       toolDeltas.reset();
       lifecycle.dispose();
@@ -427,6 +444,7 @@ export class AgentRunKernel {
           if (usageEvent) emit(usageEvent);
         },
         onEvent: (event) => {
+          steering.observe(event);
           if (
             event.type === "message_end" &&
             isAssistantMessage(event.message)
@@ -465,6 +483,9 @@ export class AgentRunKernel {
             }
           : {})
       });
+      // Steers accepted after the loop's last drain never reach the model;
+      // the Renderer resends them as the next turn.
+      steering.close();
       if (completedEvent && !settled) {
         await contextManager?.afterRun();
         if (!settled) emit(completedEvent);

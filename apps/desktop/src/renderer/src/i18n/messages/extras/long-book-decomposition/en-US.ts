@@ -1,4 +1,12 @@
 export default {
+  noticeTitle: "Before decomposing",
+  noticeModel:
+    "Configure the model with a context window of at least 270,000 tokens and an output limit of at least 120,000 tokens. If either setting is lower, open your model and adjust it under Advanced configuration.",
+  noticeMode:
+    "Only continuation mode is currently available, saving the whole-book decomposition to the writing workspace. To convert the results into related materials, use More features → Book to materials.",
+  noticeResume: "If a problem occurs, you can resume the task.",
+  noticeTokens:
+    "Decomposition consumes a large number of tokens. Consider the cost carefully before starting.",
   unitReading: "Chapter {order} reading{part}",
   unitChunk: "Reading chunk: chapters {start}–{end}",
   unitBiography: "{name} · {volume} biography",

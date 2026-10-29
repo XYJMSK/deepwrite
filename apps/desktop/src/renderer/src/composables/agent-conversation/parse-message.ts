@@ -7,7 +7,8 @@ import type {
   AgentSubagentDraw,
   AgentSubagentRun,
   AgentToolTrace,
-  ChatMessage
+  ChatMessage,
+  ChatMessageAttachment
 } from "../../types/conversation";
 import { isRecord, nonnegativeInteger, validDate } from "./shared";
 import { parseStoredEditProposal } from "./parse-proposal";
@@ -19,6 +20,33 @@ import {
 import { parseStoredSubagentRun } from "./parse-subagent";
 import { parseStoredSubagentDraw } from "./parse-subagent-draw";
 import { parseStoredContextCompactions } from "./context-compaction";
+function parseStoredAttachments(
+  values: readonly unknown[]
+): ChatMessageAttachment[] {
+  return values.flatMap((attachment) => {
+    if (
+      !isRecord(attachment) ||
+      typeof attachment.id !== "string" ||
+      typeof attachment.name !== "string" ||
+      (attachment.kind !== "text" && attachment.kind !== "image") ||
+      typeof attachment.mediaType !== "string" ||
+      !nonnegativeInteger(attachment.size)
+    ) {
+      return [];
+    }
+    return [
+      {
+        id: attachment.id,
+        name: attachment.name,
+        kind: attachment.kind,
+        mediaType: attachment.mediaType,
+        size: attachment.size,
+        ...(attachment.truncated === true ? { truncated: true } : {})
+      }
+    ];
+  });
+}
+
 export function parseStoredMessage(value: unknown): ChatMessage | undefined {
   if (!isRecord(value)) return undefined;
   if (
@@ -51,28 +79,7 @@ export function parseStoredMessage(value: unknown): ChatMessage | undefined {
   }
 
   if (Array.isArray(value.attachments)) {
-    message.attachments = value.attachments.flatMap((attachment) => {
-      if (
-        !isRecord(attachment) ||
-        typeof attachment.id !== "string" ||
-        typeof attachment.name !== "string" ||
-        (attachment.kind !== "text" && attachment.kind !== "image") ||
-        typeof attachment.mediaType !== "string" ||
-        !nonnegativeInteger(attachment.size)
-      ) {
-        return [];
-      }
-      return [
-        {
-          id: attachment.id,
-          name: attachment.name,
-          kind: attachment.kind,
-          mediaType: attachment.mediaType,
-          size: attachment.size,
-          ...(attachment.truncated === true ? { truncated: true } : {})
-        }
-      ];
-    });
+    message.attachments = parseStoredAttachments(value.attachments);
   }
 
   for (const key of [
@@ -174,6 +181,24 @@ export function parseStoredMessage(value: unknown): ChatMessage | undefined {
           id: step.id,
           type: "compaction",
           compactionId: step.compactionId,
+          createdAt: step.createdAt
+        });
+        continue;
+      }
+      if (
+        step.type === "user_note" &&
+        typeof step.noteId === "string" &&
+        typeof step.content === "string"
+      ) {
+        const attachments = Array.isArray(step.attachments)
+          ? parseStoredAttachments(step.attachments)
+          : [];
+        processingSteps.push({
+          id: step.id,
+          type: "user_note",
+          noteId: step.noteId,
+          content: step.content,
+          ...(attachments.length ? { attachments } : {}),
           createdAt: step.createdAt
         });
       }

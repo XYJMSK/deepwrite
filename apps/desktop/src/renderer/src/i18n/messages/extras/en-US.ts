@@ -17,6 +17,17 @@ export default {
     methodLoading: "The method has not loaded yet. Please try again shortly."
   },
   analysisUi: {
+    goToSavedEntry: "View saved entry",
+    discardPresetTitle: "Discard unsaved changes?",
+    discardPresetDescription:
+      "Your rules have unsaved changes. Leaving will discard them.",
+    continuePresetEditing: "Continue editing",
+    discardPresetChanges: "Discard changes",
+    resetPresetsTitle: "Restore all default rules?",
+    resetPresetsDescription:
+      "This replaces every rule in the current draft. Changes take effect after saving.",
+    confirmResetPresets: "Restore defaults",
+
     modelSettings: "Model settings",
     modelField: "Model",
     closeModelSettings: "Close model settings",

@@ -53,7 +53,7 @@ const flush = async () => {
 
 function analysisFixture(presets: ShortBookAnalysisPreset[] = [preset]) {
   const scope = effectScope();
-  const createLibraryEntry = vi.fn(async () => ({}));
+  const createLibraryEntry = vi.fn(async () => ({ id: "saved-entry" }));
   const fake = createExtrasAgentsFake({ "short-book-analysis": presets });
   const abort = vi.fn(async () => ({}));
   const remove = vi.fn(async (id: string) => id);
@@ -302,6 +302,10 @@ it("runs several presets in parallel and saves each result to its own library", 
       baseProjectRevision: 7
     });
     expect(c.batch.unsavedCount.value).toBe(1);
+    expect(c.batch.results.value[0]?.savedEntry).toEqual({
+      libraryId: "library",
+      entryId: "saved-entry"
+    });
 
     c.toggleBook("book-9");
     expect(c.batch.items.value).toEqual([]);
@@ -313,6 +317,10 @@ it("runs several presets in parallel and saves each result to its own library", 
       expect.objectContaining({ domain: "skill", stageId: "outline" })
     );
     expect(c.batch.unsavedCount.value).toBe(0);
+    expect(c.batch.results.value[1]?.savedEntry).toEqual({
+      libraryId: "skills",
+      entryId: "saved-entry"
+    });
   } finally {
     f.dispose();
   }

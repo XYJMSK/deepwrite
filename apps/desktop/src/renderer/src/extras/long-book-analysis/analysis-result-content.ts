@@ -4,6 +4,7 @@ import {
   parseSkillMarkdown,
   updateMaterialMarkdownMetadata,
   updateSkillMarkdownMetadata,
+  type CatalogLibraryEntry,
   type DeepWriteApi,
   type LongBookAnalysisOutput,
   type LongBookAnalysisResult
@@ -43,7 +44,7 @@ export async function persistAnalysisResult(
   output: LongBookAnalysisOutput,
   draft: LongBookAnalysisResult,
   input: AnalysisSaveInput
-): Promise<void> {
+): Promise<CatalogLibraryEntry> {
   const entry = {
     libraryId: input.libraryId,
     ...analysisResultEntry(draft, output.domain),
@@ -52,13 +53,13 @@ export async function persistAnalysisResult(
       : { baseProjectRevision: input.baseProjectRevision })
   };
   if (output.domain === "material") {
-    await api.catalog.createLibraryEntry({
+    return api.catalog.createLibraryEntry({
       domain: "material",
       stageId: output.stageId,
       ...entry
     });
   } else {
-    await api.catalog.createLibraryEntry({
+    return api.catalog.createLibraryEntry({
       domain: "skill",
       stageId: output.stageId,
       ...entry

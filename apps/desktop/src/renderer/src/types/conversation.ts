@@ -371,6 +371,15 @@ export type AgentProcessingStep =
       type: "compaction";
       compactionId: string;
       createdAt: string;
+    }
+  | {
+      id: string;
+      /** A message the user sent while the run worked, injected mid-run. */
+      type: "user_note";
+      noteId: string;
+      content: string;
+      attachments?: ChatMessageAttachment[];
+      createdAt: string;
     };
 
 /** One context compaction observed during an assistant run. */

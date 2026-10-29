@@ -21,6 +21,7 @@ export { interceptToolCallStream } from "./tool-stream";
 export { PiAgentRuntimeAdapter } from "./adapter";
 export { createOpenCodeRequestHeaders } from "./opencode-request-headers";
 export { UserInputResolutionError } from "./user-input-broker";
+export { SteeringError } from "./kernel/run-steering";
 export {
   evaluationConversationHistory,
   buildAgentEvaluationSnapshot

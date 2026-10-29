@@ -1,6 +1,6 @@
 import {
   ExtrasAgentIdSchema,
-  ExtrasAgentProfileIdSchema,
+  ExtrasAgentSettingsResetInputSchema,
   ExtrasAgentRunRequestSchema,
   ExtrasAgentSettingsInputSchema,
   ExtrasAgentSettingsSchema,
@@ -71,21 +71,20 @@ export const extrasAgentApi: ExtrasAgentApi = {
         )
       );
     },
-    async reset(rawAgentId, rawProfileId) {
-      const agentId = ExtrasAgentIdSchema.parse(rawAgentId);
-      const profileId =
-        rawProfileId === undefined
-          ? undefined
-          : ExtrasAgentProfileIdSchema.parse(rawProfileId);
+    async reset(rawAgentId, rawProfileId, previewOnly) {
+      const input = ExtrasAgentSettingsResetInputSchema.parse({
+        agentId: rawAgentId,
+        profileId: rawProfileId,
+        previewOnly
+      });
       const id = browserId("cmd_extras_agent_profiles_reset");
       return settingsOf(
         rawAgentId,
         await invokeCommand(
-          createEnvelope(
-            "extrasAgentConfig.reset",
-            { agentId, ...(profileId ? { profileId } : {}) },
-            { id, correlationId: id }
-          )
+          createEnvelope("extrasAgentConfig.reset", input, {
+            id,
+            correlationId: id
+          })
         )
       );
     }

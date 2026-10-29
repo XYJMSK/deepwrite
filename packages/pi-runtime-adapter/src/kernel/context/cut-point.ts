@@ -20,11 +20,14 @@ export function findCutPoint(
   start: number,
   keepRecentTokens: number,
   isRunStart: (message: AgentMessage) => boolean,
-  allowSplitTurn: boolean
+  allowSplitTurn: boolean,
+  isMidRunMessage: (message: AgentMessage) => boolean = () => false
 ): CutPoint | undefined {
   if (messages.length - start < 2) return undefined;
+  // A steering message is a user message inside a run, not a run start.
   const boundary = (message: AgentMessage): boolean =>
-    isRunStart(message) || message.role === "user";
+    isRunStart(message) ||
+    (message.role === "user" && !isMidRunMessage(message));
   let accumulated = 0;
   let budgetIndex = start;
   for (let index = messages.length - 1; index >= start; index -= 1) {

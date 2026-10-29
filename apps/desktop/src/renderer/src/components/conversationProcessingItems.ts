@@ -1,4 +1,5 @@
 import type {
+  AgentProcessingStep,
   AgentSubagentRun,
   AgentToolTrace,
   ChatContextCompaction,
@@ -24,7 +25,8 @@ export type ProcessingItem =
       type: "compaction";
       compaction: ChatContextCompaction;
       createdAt: string;
-    };
+    }
+  | Extract<AgentProcessingStep, { type: "user_note" }>;
 
 function subagentItem(
   toolCallId: string,

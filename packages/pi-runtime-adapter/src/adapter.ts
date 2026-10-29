@@ -4,6 +4,8 @@ import type {
   AgentProviderRuntimeConfig,
   AgentRuntimeRef,
   ModelConnectionTestResult,
+  SessionSteerAcceptedPayload,
+  SessionSteerCommandPayload,
   SessionUserInputResponseAcceptedPayload,
   SessionUserInputResponsePayload
 } from "@deepwrite/contracts";
@@ -12,6 +14,7 @@ import { planExtrasRun, type ExtrasAgentRunInput } from "./extras/run-plan";
 import { DEEPWRITE_FAUX_RUNTIME } from "./faux-local";
 import { ConversationAgentCache } from "./kernel/run-agent";
 import { AgentRunKernel } from "./kernel/run-kernel";
+import { RunSteeringRegistry } from "./kernel/run-steering";
 import { buildDeepWriteSystemPrompt } from "./prompts";
 import {
   buildProviderRuntime,
@@ -34,6 +37,7 @@ import {
 export class PiAgentRuntimeAdapter implements AgentRuntime {
   private readonly conversationAgents = new Map<string, Agent>();
   private readonly userInputBroker = new AgentUserInputBroker();
+  private readonly steering = new RunSteeringRegistry();
   private readonly kernel: AgentRunKernel;
   private readonly workspacePlanOptions: WorkspaceRunPlanOptions;
 
@@ -62,6 +66,7 @@ export class PiAgentRuntimeAdapter implements AgentRuntime {
         toolExecutionHooks
       ),
       userInputBroker: this.userInputBroker,
+      steering: this.steering,
       describe: (config) => this.describe(config)
     });
   }
@@ -82,6 +87,11 @@ export class PiAgentRuntimeAdapter implements AgentRuntime {
     response: SessionUserInputResponsePayload
   ): SessionUserInputResponseAcceptedPayload {
     return this.userInputBroker.resolve(response);
+  }
+
+  /** Queues a user message for the active run's next model call. */
+  steer(payload: SessionSteerCommandPayload): SessionSteerAcceptedPayload {
+    return this.steering.steer(payload);
   }
 
   resolveModelCapacity(config: AgentProviderRuntimeConfig): {

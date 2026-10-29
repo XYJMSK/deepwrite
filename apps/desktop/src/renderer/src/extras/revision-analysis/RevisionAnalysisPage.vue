@@ -25,7 +25,10 @@ const props = defineProps<{
   models: readonly ModelConfig[];
   catalogSnapshot: CatalogSnapshot | null;
 }>();
-const emit = defineEmits<{ refreshCatalog: [] }>();
+const emit = defineEmits<{
+  refreshCatalog: [];
+  openEntry: [entry: { libraryId: string; entryId: string }];
+}>();
 const c = props.controller;
 const materialsOpen = ref(!c.isBusy.value && !c.result.value);
 const analysisPage = ref<InstanceType<typeof AnalysisPageShell> | null>(null);
@@ -237,6 +240,7 @@ onMounted(() => {
       class="analysis-result-anchor"
     >
       <RevisionResultPanel
+        @open-entry="emit('openEntry', $event)"
         :controller="c"
         :catalog-snapshot="catalogSnapshot"
         @refresh-catalog="emit('refreshCatalog')"

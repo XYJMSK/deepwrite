@@ -31,7 +31,7 @@ const props = withDefaults(
   defineProps<{
     item: Exclude<
       ProcessingDisplayItem,
-      { type: "subagent" | "work-group" | "compaction" }
+      { type: "subagent" | "work-group" | "compaction" | "user_note" }
     >;
     streaming: boolean;
     messageStatus?: "streaming" | "completed" | "stopped" | "error" | undefined;

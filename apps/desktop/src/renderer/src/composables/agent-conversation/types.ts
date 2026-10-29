@@ -1,3 +1,4 @@
+import type { FollowUpQueueController } from "./follow-up-queue";
 import type { ConversationPersistenceChanges } from "./persistence-changes";
 import { type Ref } from "vue";
 import type {
@@ -170,6 +171,8 @@ export interface AgentConversationController {
   canSendAttachments: Readonly<Ref<boolean>>;
   canRewriteHistory: Readonly<Ref<boolean>>;
   canStop: Readonly<Ref<boolean>>;
+  /** Messages typed while the agent works: follow-ups and mid-run steers. */
+  followUps: FollowUpQueueController;
   acceptsRunEvent(sessionId: string, runId: string): boolean;
   approvalModeForRun(
     sessionId: string,
@@ -204,7 +207,10 @@ export interface AgentConversationController {
     workspaceDocuments?: WorkspaceDocument[],
     attachments?: WorkspaceContextAttachments
   ): Promise<boolean>;
-  sendAssistantMessage(task: ExtrasChatTask): Promise<void>;
+  sendAssistantMessage(
+    task: ExtrasChatTask,
+    attachments?: UserPromptAttachment[]
+  ): Promise<void>;
   sendLongMessage(
     context: LongWorkspaceRuntimeContext,
     attachments?: Pick<

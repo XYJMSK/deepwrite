@@ -33,7 +33,10 @@ const props = defineProps<{
   models: readonly ModelConfig[];
   catalogSnapshot: CatalogSnapshot | null;
 }>();
-const emit = defineEmits<{ refreshCatalog: [] }>();
+const emit = defineEmits<{
+  refreshCatalog: [];
+  openEntry: [entry: { libraryId: string; entryId: string }];
+}>();
 const c = props.controller;
 const managerOpen = ref(false);
 const saving = ref(false);
@@ -268,6 +271,7 @@ onMounted(() => void act(() => c.loadPresets()));
       class="analysis-result-anchor"
     >
       <AnalysisResultTabs
+        @open-entry="emit('openEntry', $event)"
         v-model:active-id="activeResultId"
         :results="c.batch.results.value"
         :total="c.batch.items.value.length"
@@ -286,7 +290,7 @@ onMounted(() => void act(() => c.loadPresets()));
       :saving="saving"
       @close="managerOpen = false"
       @save="savePresets"
-      @reset="(id) => act(() => c.resetPresets(id))"
+      :load-defaults="c.loadPresetDefaults"
     />
   </AnalysisPageShell>
 </template>

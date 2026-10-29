@@ -27,6 +27,7 @@ import {
   type DeepWriteApi,
   type ModelSettings,
   type SessionAbortCommandPayload,
+  type SessionSteerCommandPayload,
   type SessionPromptAcceptedPayload,
   type SessionPromptCommandPayload,
   type ExtrasAgentRunRequest
@@ -225,6 +226,7 @@ function createDeferredApi(): {
   /** Chat turns, sent through `extrasAgents.run`; indexed with prompts. */
   chatRuns: ExtrasAgentRunRequest[];
   aborts: SessionAbortCommandPayload[];
+  steers: SessionSteerCommandPayload[];
   resolveAccepted(index: number, payload: SessionPromptAcceptedPayload): void;
   rejectPrompt(index: number, error: Error): void;
   promptCount(): number;
@@ -241,6 +243,7 @@ function createDeferredApi(): {
   const prompts: SessionPromptCommandPayload[] = [];
   const chatRuns: ExtrasAgentRunRequest[] = [];
   const aborts: SessionAbortCommandPayload[] = [];
+  const steers: SessionSteerCommandPayload[] = [];
   let submitted = 0;
   const deferAcceptance = (index: number) =>
     new Promise<SessionPromptAcceptedPayload>((resolve, reject) => {
@@ -646,6 +649,15 @@ function createDeferredApi(): {
           requestId: payload.requestId,
           resolvedAt: new Date().toISOString()
         };
+      },
+      async steer(payload) {
+        steers.push(payload);
+        return {
+          sessionId: payload.sessionId,
+          runId: payload.runId,
+          steerId: payload.steerId,
+          acceptedAt: new Date().toISOString()
+        };
       }
     },
     models: createModelApiTestFixture(),
@@ -816,6 +828,7 @@ function createDeferredApi(): {
     prompts,
     chatRuns,
     aborts,
+    steers,
     resolveAccepted(index, payload) {
       const request = pending[index];
       if (request) request.resolve(payload);

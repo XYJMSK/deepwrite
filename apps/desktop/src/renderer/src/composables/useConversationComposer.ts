@@ -26,6 +26,9 @@ export function useConversationComposer(options: {
   draft: () => string;
   canSend: () => boolean;
   canSendAttachments: () => boolean;
+  /** While the agent runs, submitting queues the message instead. */
+  responding?: () => boolean;
+  canQueue?: () => boolean;
   runtimeAvailable: () => boolean;
   libraryDomain: () => LibraryAgentDomain | undefined;
   availableSkills: () => readonly ComposerReferenceOption[];
@@ -40,19 +43,30 @@ export function useConversationComposer(options: {
   readingAttachments: Ref<boolean>;
   emitDraft: (value: string) => void;
   emitSend: (attachments: UserPromptAttachment[]) => void;
+  /** False when the queue could not take the message. */
+  emitQueue?: (attachments: UserPromptAttachment[]) => boolean;
   emitClearEditorReferences: () => void;
 }) {
   const composerInput = ref<HTMLTextAreaElement>();
+  const responding = () => options.responding?.() ?? false;
   const activeReference = ref<ComposerReferenceMatch | null>(null);
   const activeReferenceIndex = ref(0);
 
+  const hasContent = computed(
+    () =>
+      options.draft().trim().length > 0 ||
+      options.pendingAttachments.value.length > 0 ||
+      options.editorReferences().length > 0
+  );
   const canSubmit = computed(
     () =>
       !options.readingAttachments.value &&
-      (options.canSend() ||
-        (options.canSendAttachments() &&
-          (options.pendingAttachments.value.length > 0 ||
-            options.editorReferences().length > 0)))
+      (responding()
+        ? (options.canQueue?.() ?? false) && hasContent.value
+        : options.canSend() ||
+          (options.canSendAttachments() &&
+            (options.pendingAttachments.value.length > 0 ||
+              options.editorReferences().length > 0)))
   );
 
   const referenceTriggers = computed<readonly ComposerReferenceTrigger[]>(() =>
@@ -253,8 +267,13 @@ export function useConversationComposer(options: {
       uiMessage.warning(promptError);
       return;
     }
-    options.pendingAttachments.value = [];
-    options.emitSend(attachments);
+    if (responding()) {
+      if (!options.emitQueue?.(attachments)) return;
+      options.pendingAttachments.value = [];
+    } else {
+      options.pendingAttachments.value = [];
+      options.emitSend(attachments);
+    }
     if (options.editorReferences().length) options.emitClearEditorReferences();
   }
 
@@ -295,6 +314,7 @@ export function useConversationComposer(options: {
     activeReference,
     activeReferenceIndex,
     canSubmit,
+    hasContent,
     referenceOptions,
     filteredReferenceOptions,
     referenceMenuTitle,

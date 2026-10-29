@@ -9,8 +9,6 @@ import {
   type ShortBookAnalysisPreset,
   type ShortBookAnalysisResult,
   type ShortBookAnalysisSource,
-  type ShortBookAnalysisSourceSummary,
-  type ShortBookAnalysisTextInput,
   type ThinkingLevel
 } from "@deepwrite/contracts/renderer";
 import {
@@ -25,6 +23,7 @@ import {
 } from "../long-book-analysis/analysis-result-content";
 import { createShortAnalysisRun } from "./analysis-run";
 import { shortPresetBlock, shortSelectionLimit } from "./preset-selection";
+import { useShortAnalysisSources } from "./useShortAnalysisSources";
 
 const t = createScopedTranslator("extras");
 export type ShortBookAnalysisController = ReturnType<
@@ -44,16 +43,19 @@ export function useShortBookAnalysis(options: {
     ShortBookAnalysisResult
   >({ label: (preset) => presetLabel(preset) });
   const presets = ref<ShortBookAnalysisPreset[]>([]);
-  const savedSources = ref<ShortBookAnalysisSourceSummary[]>([]);
-  const drafts = ref<ShortBookAnalysisSource[]>([]);
-  const selectedIds = ref<string[]>([]);
-  const activeId = ref("");
-  const loading = ref(false);
   const selectedPresetIds = ref<string[]>([]);
   const selectedModelId = ref("");
   const selectedThinkingLevel = ref<ThinkingLevel>("off");
   const models = shallowRef<readonly ModelConfig[]>([]);
   let disposed = false;
+  const sources = useShortAnalysisSources({
+    api: () => api().shortBookAnalysis,
+    assertEditable: editable,
+    settle: () => batch.settle(),
+    selectionLimit: () => selectionLimit.value,
+    isDisposed: () => disposed
+  });
+  const { drafts, selectedIds, activeId, loading } = sources;
   const selectedPresets = computed(() =>
     selectedPresetIds.value.flatMap((id) => {
       const preset = presets.value.find((item) => item.id === id);
@@ -100,10 +102,6 @@ export function useShortBookAnalysis(options: {
     if (batch.isBusy.value || loading.value)
       throw new Error(t("revisionAnalysis.busyEditLater"));
   }
-  async function loadSources() {
-    const catalog = await api().shortBookAnalysis.sources.list();
-    if (!disposed) savedSources.value = catalog.sources;
-  }
   async function loadPresets() {
     const settings = await api().extrasAgents.profiles.list(
       "short-book-analysis"
@@ -116,50 +114,24 @@ export function useShortBookAnalysis(options: {
     const first = presets.value[0]?.id;
     selectedPresetIds.value = kept.length || !first ? kept : [first];
   }
-  async function addDrafts(sources: ShortBookAnalysisSource[]) {
-    if (disposed) return;
-    batch.settle();
-    for (const source of sources) {
-      if (!drafts.value.some((b) => b.id === source.id))
-        drafts.value.push(source);
-    }
-    activeId.value = sources[0]?.id ?? activeId.value;
-    if (selectionLimit.value === 1 && sources[0])
-      selectedIds.value = [sources[0].id];
-    await loadSources();
-  }
-  function removeDraft(id: string) {
-    const index = drafts.value.findIndex((book) => book.id === id);
-    if (index < 0) return;
-    batch.settle();
-    drafts.value = drafts.value.filter((book) => book.id !== id);
-    selectedIds.value = selectedIds.value.filter((value) => value !== id);
-    if (activeId.value === id)
-      activeId.value =
-        drafts.value[Math.min(index, drafts.value.length - 1)]?.id ?? "";
-  }
   async function persistResult(id: string, input: AnalysisSaveInput) {
     const entry = batch.results.value.find((item) => item.id === id);
     if (!entry) throw new Error(t("shortBookAnalysis.noCompletedResult"));
-    await persistAnalysisResult(
+    const saved = await persistAnalysisResult(
       api(),
       entry.preset.output,
       entry.result,
       input
     );
-    batch.markSaved(id);
+    batch.markSaved(id, { libraryId: input.libraryId, entryId: saved.id });
   }
   return {
+    ...sources,
     batch,
     status: batch.status,
     isBusy: batch.isBusy,
     error: batch.error,
     presets,
-    savedSources,
-    drafts,
-    selectedIds,
-    activeId,
-    loading,
     selectedPresetIds,
     selectedModelId,
     selectedThinkingLevel,
@@ -207,7 +179,6 @@ export function useShortBookAnalysis(options: {
       selectedPresetIds.value = first ? [first] : [];
     },
     loadPresets,
-    loadSources,
     setConfiguredModels(next: readonly ModelConfig[], defaultModelId?: string) {
       models.value = next;
       const current =
@@ -220,81 +191,6 @@ export function useShortBookAnalysis(options: {
         !current.thinkingLevelOptions.includes(selectedThinkingLevel.value)
       )
         selectedThinkingLevel.value = current.defaultThinkingLevel;
-    },
-    async chooseSources() {
-      editable();
-      loading.value = true;
-      try {
-        const sources = await api().shortBookAnalysis.chooseSources();
-        if (sources) await addDrafts(sources);
-      } finally {
-        loading.value = false;
-      }
-    },
-    async addText(input: ShortBookAnalysisTextInput) {
-      editable();
-      if (!input.title.trim())
-        throw new Error(t("shortBookAnalysis.storyTitleRequired"));
-      if (!input.text.trim())
-        throw new Error(t("shortBookAnalysis.completeTextRequired"));
-      loading.value = true;
-      try {
-        await addDrafts([await api().shortBookAnalysis.addText(input)]);
-      } finally {
-        loading.value = false;
-      }
-    },
-    async loadSource(id: string) {
-      editable();
-      loading.value = true;
-      try {
-        const source = await api().shortBookAnalysis.sources.load(id);
-        await addDrafts([source]);
-      } finally {
-        loading.value = false;
-      }
-    },
-    toggleBook(id: string) {
-      editable();
-      if (!drafts.value.some((b) => b.id === id)) return;
-      const selected = selectedIds.value.includes(id);
-      if (selectionLimit.value === 1) {
-        if (!selected || selectedIds.value.length !== 1) batch.settle();
-        selectedIds.value = [id];
-        activeId.value = id;
-        return;
-      }
-      if (!selected && selectedIds.value.length >= selectionLimit.value)
-        throw new Error(t("shortBookAnalysis.maxTenStories"));
-      batch.settle();
-      selectedIds.value = selected
-        ? selectedIds.value.filter((value) => value !== id)
-        : [...selectedIds.value, id];
-    },
-    removeBook(id: string) {
-      editable();
-      removeDraft(id);
-    },
-    async deleteSource(id: string) {
-      editable();
-      loading.value = true;
-      try {
-        await api().shortBookAnalysis.sources.delete(id);
-        if (disposed) return;
-        removeDraft(id);
-        savedSources.value = savedSources.value.filter(
-          (book) => book.id !== id
-        );
-      } finally {
-        loading.value = false;
-      }
-    },
-    updateBook(id: string, input: { title: string; text: string }) {
-      editable();
-      const index = drafts.value.findIndex((b) => b.id === id);
-      if (index < 0) return;
-      batch.settle();
-      drafts.value[index] = { ...drafts.value[index]!, ...input };
     },
     async savePresets(next: readonly ShortBookAnalysisPreset[]) {
       editable();
@@ -310,6 +206,15 @@ export function useShortBookAnalysis(options: {
       batch.settle();
       presets.value = (await api().extrasAgents.profiles.save(input)).profiles;
       await loadPresets();
+    },
+    async loadPresetDefaults() {
+      return (
+        await api().extrasAgents.profiles.reset(
+          "short-book-analysis",
+          undefined,
+          true
+        )
+      ).profiles;
     },
     async resetPresets(id?: string) {
       editable();

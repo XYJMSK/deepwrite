@@ -43,7 +43,7 @@ function fixture() {
     "revision-analysis": [defaultProfile]
   });
   const abort = vi.fn(async () => ({})),
-    createLibraryEntry = vi.fn(async () => ({}));
+    createLibraryEntry = vi.fn(async () => ({ id: "saved-skill" }));
   const api = {
     session: { abort },
     extrasAgents: fake.extrasAgents,
@@ -294,7 +294,12 @@ describe("revision analysis controller", () => {
     await expect(f.c.persistSkill(library)).rejects.toThrow("版本冲突");
     expect(f.c.result.value!.body).toBe("编辑后的技能");
     expect(f.c.savedKey.value).toBe("");
+    expect(f.c.savedEntry.value).toBeNull();
     await f.c.persistSkill(library);
+    expect(f.c.savedEntry.value).toEqual({
+      libraryId: "skills",
+      entryId: "saved-skill"
+    });
     await f.c.persistSkill(library);
     expect(f.createLibraryEntry).toHaveBeenCalledTimes(2);
     expect(f.createLibraryEntry.mock.calls[1]).toEqual([

@@ -335,6 +335,7 @@ function forwardPreviewMutation(
         :can-rewrite-history="canRewriteHistory"
         :submit-edited-message="submitEditedMessage"
         :can-stop="conversationController.canStop.value"
+        :follow-ups="conversationController.followUps"
         :runtime-available="runtimeAvailable"
         :models="conversationController.configuredModels.value"
         :selected-model-id="conversationController.selectedModelId.value"

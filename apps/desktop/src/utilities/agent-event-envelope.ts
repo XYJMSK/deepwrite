@@ -318,6 +318,14 @@ export function toEventEnvelope(
     );
   }
 
+  if (event.type === "agent.steering_delivered") {
+    return createEnvelope(
+      "agent.steering_delivered",
+      { sessionId: event.sessionId, runId: event.runId, ...event.payload },
+      { id: createId("evt"), context }
+    );
+  }
+
   if (event.type === "extras_agent.output_updated") {
     return createEnvelope(
       "extras_agent.output_updated",

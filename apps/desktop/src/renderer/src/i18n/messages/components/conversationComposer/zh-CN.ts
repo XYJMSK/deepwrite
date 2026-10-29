@@ -23,5 +23,6 @@ export default {
   selectManuscriptEditingPermission: "选择正文修改权限",
   voiceInput: "语音输入",
   sendMessage: "发送消息",
-  stopGeneration: "停止生成"
+  stopGeneration: "停止生成",
+  withdrawTooManyAttachments: "附件过多，部分附件未能放回输入框。"
 };

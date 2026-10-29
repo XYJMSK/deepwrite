@@ -8,7 +8,10 @@ import type {
 import AppIcon from "../../components/AppIcon.vue";
 import { createScopedTranslator } from "../../i18n";
 import { presetLabel } from "../analysis-ui/preset-labels";
-import type { PresetBatchResult } from "../analysis-ui/preset-batch";
+import type {
+  SavedLibraryEntry,
+  PresetBatchResult
+} from "../analysis-ui/preset-batch";
 import AnalysisResultPanel from "./AnalysisResultPanel.vue";
 import type { AnalysisSaveInput } from "./analysis-result-content";
 import { compatibleAnalysisLibraries } from "./task-options";
@@ -27,6 +30,7 @@ const props = defineProps<{
   activeId: string;
 }>();
 const emit = defineEmits<{
+  openEntry: [entry: SavedLibraryEntry];
   "update:activeId": [id: string];
   update: [id: string, result: LongBookAnalysisResult];
   save: [id: string, input: AnalysisSaveInput];
@@ -105,6 +109,8 @@ function saveAll(): void {
     :preset="active.preset"
     :catalog-snapshot="catalogSnapshot"
     :saving="saving"
+    :saved-entry="active.savedEntry"
+    @open-entry="emit('openEntry', $event)"
     :context="context"
     :eyebrow="
       batched

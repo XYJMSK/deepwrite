@@ -79,8 +79,9 @@ describe("AgentConversation edit proposal placement", () => {
     );
     expect(conversationSource).toContain("<ConversationComposer");
     expect(conversationSource).toContain("v-else");
+    // With a follow-up queue the composer stays usable while the agent runs.
     expect(composerSource).toContain(
-      '<div class="composer" :class="{ \'is-disabled\': responding }">'
+      '<div class="composer" :class="{ \'is-disabled\': lockedWhileRunning }">'
     );
     expect(writingWorkspaceSource).toContain(
       ':user-input-request="conversationController.pendingUserInput.value"'

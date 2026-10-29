@@ -332,6 +332,10 @@ export function processingLabel(message: ChatMessage, now: number): string {
   ) {
     return t("modelQueuedWaitedValueS", { arg0: seconds });
   }
+  return processedForSeconds(seconds);
+}
+
+function processedForSeconds(seconds: number): string {
   if (seconds < 60) {
     return t("processedForValueSeconds", { arg0: seconds });
   }
@@ -339,4 +343,15 @@ export function processingLabel(message: ChatMessage, now: number): string {
     arg0: Math.floor(seconds / 60),
     arg1: seconds % 60
   });
+}
+
+/** The label of one finished part of a reply, timed on its own. */
+export function processingSpanLabel(
+  startedAt: string,
+  endedAt?: string
+): string {
+  const start = Date.parse(startedAt);
+  const end = endedAt ? Date.parse(endedAt) : Number.NaN;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return t("processed");
+  return processedForSeconds(Math.max(1, Math.ceil((end - start) / 1_000)));
 }

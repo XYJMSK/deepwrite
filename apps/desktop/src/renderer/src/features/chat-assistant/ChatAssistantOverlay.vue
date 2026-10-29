@@ -3,7 +3,8 @@ import { createScopedTranslator } from "../../i18n";
 import { computed, nextTick, ref, toRef, watch } from "vue";
 import type {
   CatalogIndexSnapshot,
-  LongBookSummary
+  LongBookSummary,
+  UserPromptAttachment
 } from "@deepwrite/contracts";
 import ChatAssistantProjectConfig from "./ChatAssistantProjectConfig.vue";
 import ChatAssistantRoleplayConfig from "./ChatAssistantRoleplayConfig.vue";
@@ -216,10 +217,18 @@ function setConversationScroller(element: unknown): void {
   scroller.value = element instanceof HTMLElement ? element : undefined;
 }
 
-async function send(): Promise<void> {
-  if (!effectiveCanSend.value) return;
+async function send(attachments: UserPromptAttachment[]): Promise<void> {
+  if (
+    !assistant.chatTask.value ||
+    !(
+      canSend.value ||
+      (attachments.length && controller.value!.canSendAttachments.value)
+    )
+  )
+    return;
   await assistant.sendAssistantMessage(
-    webSearch.enabled.value && webSearch.available.value
+    webSearch.enabled.value && webSearch.available.value,
+    attachments
   );
 }
 
@@ -380,12 +389,16 @@ watch(
 
     <ChatAssistantComposer
       ref="composer"
+      :key="activeContextKey"
       :session-id="controller.sessionId.value"
       :has-history="controller.messages.value.length > 0"
       :draft="controller.draft.value"
       :runtime-available="runtimeAvailable"
       :busy="controller.isBusy.value"
       :can-send="effectiveCanSend"
+      :can-send-attachments="
+        controller.canSendAttachments.value && assistant.chatTask.value !== null
+      "
       :can-stop="canStop"
       :selected-model-id="controller.selectedModelId.value"
       :model-options="modelOptions"

@@ -18,9 +18,13 @@ import { runVoiceSmoke } from "./smoke-voice";
 import { runVoiceUiSmoke } from "./smoke-voice-ui";
 import { runI18nSmoke } from "./smoke-i18n";
 import { runLongBookDecompositionSmoke } from "./smoke-long-book-decomposition";
-import { runDecompositionUiSmoke } from "./smoke-decomposition-ui";
+import {
+  runDecompositionUiSmoke,
+  runPresetProtectionSmoke
+} from "./smoke-decomposition-ui";
 import { runBookIdentitySmoke } from "./smoke-book-identity";
 import { runLibraryGroupDeletionSmoke } from "./smoke-library-group-deletion";
+import { runShortBookSourceSmoke } from "./smoke-short-book-sources";
 import { smokeReleaseConfig } from "./smoke-release-config";
 
 export function smokeErrorMessage(error: unknown): string {
@@ -38,6 +42,20 @@ export async function runApplicationSmoke(
   setEventTap: (tap: ((event: SystemEventEnvelope) => void) | undefined) => void
 ): Promise<void> {
   const releaseConfig = smokeReleaseConfig();
+  if (process.env.DEEPWRITE_SMOKE_SUITE === "preset-protection") {
+    const presetProtection = await runPresetProtectionSmoke(window);
+    console.log(
+      `DEEPWRITE_SMOKE_OK ${JSON.stringify({ health, presetProtection })}`
+    );
+    return;
+  }
+  if (process.env.DEEPWRITE_SMOKE_SUITE === "short-book-sources") {
+    const shortBookSources = await runShortBookSourceSmoke(window);
+    console.log(
+      `DEEPWRITE_SMOKE_OK ${JSON.stringify({ health, shortBookSources })}`
+    );
+    return;
+  }
   if (process.env.DEEPWRITE_SMOKE_SUITE === "library-groups") {
     const libraryGroups = await runLibraryGroupDeletionSmoke(window);
     console.log(
@@ -181,6 +199,7 @@ export async function runApplicationSmoke(
 
     const conversation = await runConversationSmoke(window);
     const bookTemplates = await runBookTemplateSmoke(window);
+    const shortBookSources = await runShortBookSourceSmoke(window);
     const extrasAgents = await runExtrasAgentSmoke(window);
     const extrasChat = await runExtrasChatSmoke(window);
     const contextCompaction = await runContextCompactionSmoke(window);
@@ -193,6 +212,7 @@ export async function runApplicationSmoke(
         releaseConfig,
         conversation,
         bookTemplates,
+        shortBookSources,
         extrasAgents,
         extrasChat,
         contextCompaction,

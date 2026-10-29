@@ -142,6 +142,7 @@ const emit = defineEmits<{
     :can-send="conversationController.canSend.value"
     :can-send-attachments="conversationController.canSendAttachments.value"
     :can-stop="conversationController.canStop.value"
+    :follow-ups="conversationController.followUps"
     :models="conversationController.configuredModels.value"
     :selected-model-id="conversationController.selectedModelId.value"
     :thinking-level="conversationController.thinkingLevel.value"

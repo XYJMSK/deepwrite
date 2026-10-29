@@ -256,6 +256,15 @@ export function useLongBookDecomposition(options: {
         })
       ).profiles;
     },
+    async loadProfileDefaults() {
+      return (
+        await api().extrasAgents.profiles.reset(
+          "long-book-decomposition",
+          undefined,
+          true
+        )
+      ).profiles;
+    },
     async resetProfile(id: string) {
       profiles.value = (
         await api().extrasAgents.profiles.reset("long-book-decomposition", id)

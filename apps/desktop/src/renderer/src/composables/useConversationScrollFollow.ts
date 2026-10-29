@@ -11,6 +11,8 @@ export function useConversationScrollFollow(options: {
   responding: () => boolean;
   currentSessionId?: () => string;
   longProposalItems?: () => readonly LongWorkspaceProposalItem[];
+  /** Messages sent during a reply, drawn after it until they land. */
+  pendingMessageIds?: () => readonly string[];
   onScroll?: () => void;
 }) {
   const scroller = ref<HTMLElement>();
@@ -141,7 +143,8 @@ export function useConversationScrollFollow(options: {
           .join(","),
         (options.longProposalItems?.() ?? [])
           .map((item) => `${item.event.id}:${item.status}:${item.error ?? ""}`)
-          .join(",")
+          .join(","),
+        options.pendingMessageIds?.().join(",") ?? ""
       ].join("|");
     },
     async () => {
@@ -163,6 +166,19 @@ export function useConversationScrollFollow(options: {
     () => options.responding(),
     (responding, wasResponding) => {
       if (!responding || wasResponding) return;
+      tailFollowLockedForResponse.value = false;
+      followsConversationTail.value = true;
+      void nextTick(() => {
+        scheduleConversationTailFollow();
+      });
+    }
+  );
+
+  // Sending during a reply brings the view back to the tail, like any send.
+  watch(
+    () => options.pendingMessageIds?.() ?? [],
+    (next, previous) => {
+      if (!next.some((id) => !previous.includes(id))) return;
       tailFollowLockedForResponse.value = false;
       followsConversationTail.value = true;
       void nextTick(() => {

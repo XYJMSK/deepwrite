@@ -11,6 +11,7 @@ import {
 } from "@deepwrite/contracts/renderer";
 import type { ChatMessage } from "../../types/conversation";
 import { latestConversationCheckpoint } from "./context-compaction";
+import { steeringNotes } from "./steering-notes";
 
 const t = createScopedTranslator("workspace.history");
 
@@ -48,7 +49,7 @@ export function buildConversationRestore(
     const message = messages[index];
     if (!message || message.activityOnly || !message.content.trim()) continue;
     if (!Number.isFinite(Date.parse(message.createdAt))) continue;
-    const content = message.attachments?.length
+    const base = message.attachments?.length
       ? t("historicalAttachmentNoteOnlyAttachmentNamesWereRestoredOriginal", {
           content: message.content,
           map: message.attachments
@@ -56,6 +57,16 @@ export function buildConversationRestore(
             .join("、")
         })
       : message.content;
+    // A restored transcript carries only final texts, so additions made
+    // during the reply belong with the request they amended, before it.
+    const notes =
+      message.role === "user" ? steeringNotes(messages[index + 1]) : [];
+    const content = notes.length
+      ? t("steeringNotes", {
+          content: base,
+          notes: notes.map((note) => note.content).join("\n")
+        })
+      : base;
     if (
       history.length >= SESSION_CONVERSATION_HISTORY_MAX_MESSAGES ||
       content.length > SESSION_CONVERSATION_HISTORY_MAX_MESSAGE_LENGTH ||

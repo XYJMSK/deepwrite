@@ -12,6 +12,7 @@ export function createRevisionSkillSave(
   api: () => DeepWriteApi,
   result: Ref<RevisionAnalysisResult | null>
 ) {
+  const savedEntry = ref<{ libraryId: string; entryId: string } | null>(null);
   const saving = ref(false),
     savedKey = ref("");
   const key = () =>
@@ -22,6 +23,7 @@ export function createRevisionSkillSave(
     ]);
   return {
     saving,
+    savedEntry,
     savedKey,
     skillKey: key,
     async persistSkill(library: SkillLibrary) {
@@ -40,7 +42,7 @@ export function createRevisionSkillSave(
       if (!parsed.valid) throw new Error(parsed.message);
       saving.value = true;
       try {
-        await api().catalog.createLibraryEntry({
+        const entry = await api().catalog.createLibraryEntry({
           domain: "skill",
           libraryId: library.id,
           title: draft.title,
@@ -49,6 +51,7 @@ export function createRevisionSkillSave(
             ? { baseProjectRevision: library.projectRevision }
             : {})
         });
+        savedEntry.value = { libraryId: library.id, entryId: entry.id };
         savedKey.value = currentKey;
         return true;
       } finally {

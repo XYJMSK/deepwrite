@@ -1,4 +1,11 @@
 export default {
+  noticeTitle: "拆书须知",
+  noticeModel:
+    "模型的上下文配置至少为 27 万 token，输出配置至少为 12 万 token。如果配置不足，请前往自己的模型，点击「高级配置」进行调整。",
+  noticeMode:
+    "目前仅提供续写模式，将整书拆解结果写入创作空间。如需转为相关素材，可在「更多功能 → 书籍转素材」中进行转换。",
+  noticeResume: "遇到问题时，可以重新继续任务。",
+  noticeTokens: "拆书会消耗大量 token，请在开始前谨慎决定。",
   unitReading: "第 {order} 章通读{part}",
   unitChunk: "阅读块：第 {start}–{end} 章",
   unitBiography: "{name} · {volume}小传",

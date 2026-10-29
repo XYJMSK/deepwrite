@@ -18,7 +18,10 @@ type SendEntrypointsContext = Pick<
   "sendMessage" | "sessionId" | "messages"
 >;
 type LongSendContext = SendEntrypointsContext &
-  Pick<AgentConversationContext, "epoch" | "draft" | "submitting" | "isBusy">;
+  Pick<
+    AgentConversationContext,
+    "epoch" | "draft" | "submitting" | "isBusy" | "queuedDispatch"
+  >;
 
 async function withLongRuntime(
   ctx: LongSendContext,
@@ -38,7 +41,8 @@ async function withLongRuntime(
     if (
       ctx.epoch !== epoch ||
       ctx.sessionId.value !== sessionId ||
-      ctx.draft.value !== draft
+      // A queued follow-up does not send the draft, which may keep changing.
+      (!ctx.queuedDispatch && ctx.draft.value !== draft)
     )
       return false;
     const validated = validateLongRuntimeContext(snapshot);
@@ -57,9 +61,10 @@ async function withLongRuntime(
 /** Sends the draft as a turn of a "更多功能" chat agent. */
 export async function sendAssistantMessage(
   ctx: SendEntrypointsContext,
-  task: ExtrasChatTask
+  task: ExtrasChatTask,
+  attachments: UserPromptAttachment[] = []
 ): Promise<void> {
-  await ctx.sendMessage(null, [], {}, [], undefined, task);
+  await ctx.sendMessage(null, [], {}, attachments, undefined, task);
 }
 export async function resendMessage(
   ctx: SendEntrypointsContext,

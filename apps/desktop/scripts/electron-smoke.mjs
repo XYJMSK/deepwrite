@@ -12,11 +12,13 @@ assertElectronLaunchAllowed();
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(scriptDir, "..");
+const presetProtectionOnly = process.argv.includes("--preset-protection-only");
 const i18nOnly = process.argv.includes("--i18n-only");
 const conversationOnly = process.argv.includes("--conversation-only");
 const decompositionOnly = process.argv.includes("--decomposition-only");
 const bookIdentityOnly = process.argv.includes("--book-identity-only");
 const libraryGroupsOnly = process.argv.includes("--library-groups-only");
+const shortBookSourcesOnly = process.argv.includes("--short-book-sources-only");
 const decompositionRealModel = process.argv.includes(
   "--decomposition-real-model"
 );
@@ -74,19 +76,23 @@ const child = spawn(command, args, {
   env: {
     ...process.env,
     DEEPWRITE_SMOKE: "1",
-    DEEPWRITE_SMOKE_SUITE: libraryGroupsOnly
-      ? "library-groups"
-      : bookIdentityOnly
-        ? "book-identity"
-        : decompositionRealModel
-          ? "decomposition-real-model"
-          : decompositionOnly
-            ? "decomposition"
-            : conversationOnly
-              ? "conversation"
-              : i18nOnly
-                ? "i18n"
-                : "all",
+    DEEPWRITE_SMOKE_SUITE: presetProtectionOnly
+      ? "preset-protection"
+      : shortBookSourcesOnly
+        ? "short-book-sources"
+        : libraryGroupsOnly
+          ? "library-groups"
+          : bookIdentityOnly
+            ? "book-identity"
+            : decompositionRealModel
+              ? "decomposition-real-model"
+              : decompositionOnly
+                ? "decomposition"
+                : conversationOnly
+                  ? "conversation"
+                  : i18nOnly
+                    ? "i18n"
+                    : "all",
     ELECTRON_DISABLE_SECURITY_WARNINGS: "true"
   },
   stdio: ["ignore", "pipe", "pipe"]
@@ -152,6 +158,38 @@ child.on("close", async (code) => {
     process.exit(1);
   }
 
+  if (presetProtectionOnly) {
+    if (
+      summary.presetProtection?.status !== "ok" ||
+      summary.presetProtection.agents?.length !== 3
+    ) {
+      console.error(
+        "Electron preset protection smoke returned an invalid summary."
+      );
+      process.exit(1);
+    }
+    console.log(
+      "Electron preset protection smoke passed: all three editors, outside clicks, discard confirmation, failed saves and draft-only resets."
+    );
+    return;
+  }
+  if (shortBookSourcesOnly) {
+    if (
+      summary.shortBookSources?.status !== "ok" ||
+      summary.shortBookSources.imported !== 2 ||
+      !summary.shortBookSources.pasted ||
+      !summary.shortBookSources.reopened
+    ) {
+      console.error(
+        "Electron short book source smoke returned an invalid summary."
+      );
+      process.exit(1);
+    }
+    console.log(
+      "Electron short book source smoke passed: TXT and Markdown import, pasted text, source history, reopening and deletion through Preload, Main and Core."
+    );
+    return;
+  }
   if (libraryGroupsOnly) {
     if (
       summary.libraryGroups?.status !== "ok" ||
@@ -261,6 +299,10 @@ child.on("close", async (code) => {
   if (
     summary.bookTemplates?.status !== "ok" ||
     summary.bookTemplates?.created !== 4 ||
+    summary.shortBookSources?.status !== "ok" ||
+    summary.shortBookSources?.imported !== 2 ||
+    summary.shortBookSources?.pasted !== true ||
+    summary.shortBookSources?.reopened !== true ||
     summary.extrasAgents?.status !== "ok" ||
     summary.extrasAgents?.runtime !== "local-faux" ||
     summary.extrasAgents?.styleResult !== true ||

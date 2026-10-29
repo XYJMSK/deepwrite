@@ -200,7 +200,11 @@ function controllerFixture() {
     selectWebSearchEnabled,
     selectTemperature,
     selectApprovalMode,
-    stopGeneration
+    stopGeneration,
+    followUps: {
+      dispatching: computed(() => false),
+      setDispatcher: vi.fn()
+    }
   } as unknown as AgentConversationController;
   return {
     controller,

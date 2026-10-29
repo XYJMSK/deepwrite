@@ -2,6 +2,7 @@ import "./analysis-probe-i18n";
 import { createApp, h, nextTick, ref } from "vue";
 import ShortBookAnalysisPage from "../../src/renderer/src/extras/short-book-analysis/ShortBookAnalysisPage.vue";
 import { useShortBookAnalysis } from "../../src/renderer/src/extras/short-book-analysis/useShortBookAnalysis";
+import { verifyShortSourceErrors } from "./short-book-analysis-source-errors-probe";
 import {
   probeCatalog,
   savedProbeEntries,
@@ -263,6 +264,7 @@ async function verifyParallelPresets() {
 async function run() {
   await frame();
   await verifyHeaderModelSettings(frame);
+  await verifyShortSourceErrors(api, frame);
   c.drafts.value = [];
   await frame();
   check(
@@ -532,7 +534,7 @@ async function run() {
   await frame();
   button("取消").click();
   await frame();
-  return { passed: true, checks: 26 };
+  return { passed: true, checks: 35 };
 }
 async function show(
   scheme: "light" | "dark",

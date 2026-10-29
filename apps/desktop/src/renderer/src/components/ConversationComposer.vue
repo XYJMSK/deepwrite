@@ -22,16 +22,15 @@ import type { ModelSelectOption } from "../utils/modelSelectOptions";
 import type { ComposerReferenceTrigger } from "../utils/composerReferences";
 import { agentTeamMemberReferences } from "../utils/agentTeamMemberReferences";
 import { PROMPT_ATTACHMENT_ACCEPT } from "../utils/promptAttachments";
-import {
-  useConversationAttachments,
-  attachmentPreview,
-  formatFileSize
-} from "../composables/useConversationAttachments";
+import { useConversationAttachments } from "../composables/useConversationAttachments";
 import { useConversationComposer } from "../composables/useConversationComposer";
 import { useAttachmentDrop } from "../composables/useAttachmentDrop";
 import { useVoiceInput } from "../composables/useVoiceInput";
+import { useComposerQueue } from "../composables/useComposerQueue";
+import type { FollowUpQueueController } from "../composables/agent-conversation/follow-up-queue";
 import { useSettingsStore } from "../stores/settingsStore";
 import AppIcon from "./AppIcon.vue";
+import PromptAttachmentList from "./PromptAttachmentList.vue";
 import AgentTeamModeSelect from "./AgentTeamModeSelect.vue";
 import ContextCompactionButton from "./ContextCompactionButton.vue";
 import ContextWindowIndicator from "./ContextWindowIndicator.vue";
@@ -88,6 +87,8 @@ const props = defineProps<{
     description: string;
   }>;
   approvalModeIcon: IconName;
+  /** Messages typed while the agent works; absent where queueing is off. */
+  followUps?: FollowUpQueueController | undefined;
 }>();
 
 const emit = defineEmits<{
@@ -143,6 +144,7 @@ const {
   activeReference,
   activeReferenceIndex,
   canSubmit,
+  hasContent,
   referenceOptions,
   filteredReferenceOptions,
   referenceMenuTitle,
@@ -159,6 +161,8 @@ const {
   draft: () => props.draft,
   canSend: () => props.canSend,
   canSendAttachments: () => props.canSendAttachments,
+  responding: () => props.responding,
+  canQueue: () => props.followUps?.canQueue.value ?? false,
   runtimeAvailable: () => props.runtimeAvailable,
   libraryDomain: () => props.libraryDomain,
   availableSkills: () => props.availableSkills,
@@ -174,6 +178,7 @@ const {
   readingAttachments,
   emitDraft: (value) => emit("update:draft", value),
   emitSend: (attachments) => emit("send", attachments),
+  emitQueue: (attachments) => props.followUps?.enqueue(attachments) ?? false,
   emitClearEditorReferences: () => emit("clearEditorReferences")
 });
 closeReferenceMenuHolder.run = closeReferenceMenu;
@@ -185,7 +190,9 @@ const {
   handleDrop
 } = useAttachmentDrop({
   canReceive: () =>
-    !props.responding && props.runtimeAvailable && !readingAttachments.value,
+    props.runtimeAvailable &&
+    !readingAttachments.value &&
+    !(props.responding && !props.followUps),
   addFiles: (files) => addAttachmentFiles(files),
   closeReferenceMenu
 });
@@ -220,9 +227,20 @@ const voice = useVoiceInput({
   draft: () => props.draft,
   input: composerInput,
   updateDraft: (value) => emit("update:draft", value),
-  canStart: () => !props.responding && props.runtimeAvailable,
-  canSend: () => canSubmit.value && !props.responding && props.runtimeAvailable,
+  canStart: () =>
+    props.runtimeAvailable && !(props.responding && !props.followUps),
+  canSend: () => canSubmit.value && props.runtimeAvailable,
   send: submitMessage
+});
+
+// Without a queue the composer keeps waiting for the run, as before.
+const lockedWhileRunning = computed(() => props.responding && !props.followUps);
+useComposerQueue({
+  queue: () => props.followUps,
+  draft: () => props.draft,
+  emitDraft: (value) => emit("update:draft", value),
+  pendingAttachments,
+  tooManyAttachments: () => t("withdrawTooManyAttachments")
 });
 
 function startVoice(): void {
@@ -328,7 +346,7 @@ defineExpose({ focusInput });
         </div>
       </div>
 
-      <div class="composer" :class="{ 'is-disabled': responding }">
+      <div class="composer" :class="{ 'is-disabled': lockedWhileRunning }">
         <ComposerContextBar
           v-if="messagesEmpty"
           :book-title="bookTitle"
@@ -389,66 +407,17 @@ defineExpose({ focusInput });
                     arg0: editorReference.label
                   })
                 "
-                :disabled="responding"
                 @click="emit('removeEditorReference', editorReference.id)"
               >
                 <AppIcon name="close" :size="11" />
               </button>
             </div>
           </div>
-          <div
-            v-if="pendingAttachments.length || readingAttachments"
-            class="composer-attachment-list"
-            :aria-label="t('attachmentsToSend')"
-          >
-            <article
-              v-for="attachment in pendingAttachments"
-              :key="attachment.id"
-              class="composer-attachment-chip"
-            >
-              <img
-                v-if="attachmentPreview(attachment)"
-                :src="attachmentPreview(attachment)"
-                alt=""
-              />
-              <span v-else class="composer-attachment-icon" aria-hidden="true">
-                <AppIcon name="file" :size="16" />
-              </span>
-              <span class="composer-attachment-copy">
-                <strong>{{ attachment.name }}</strong>
-                <small>
-                  {{
-                    attachment.kind === "image"
-                      ? t("image")
-                      : attachment.mediaType === "application/pdf"
-                        ? t("pDFText")
-                        : t("text")
-                  }}
-                  · {{ formatFileSize(attachment.size) }}
-                  <template
-                    v-if="attachment.kind === 'text' && attachment.truncated"
-                  >
-                    {{ t("truncated") }}</template
-                  >
-                </small>
-              </span>
-              <button
-                type="button"
-                :aria-label="
-                  t('removeAttachmentValue', {
-                    arg0: attachment.name
-                  })
-                "
-                :disabled="responding"
-                @click="removePendingAttachment(attachment.id)"
-              >
-                <AppIcon name="close" :size="13" />
-              </button>
-            </article>
-            <span v-if="readingAttachments" class="composer-attachment-loading">
-              {{ t("readingAttachments") }}
-            </span>
-          </div>
+          <PromptAttachmentList
+            :pending-attachments="pendingAttachments"
+            :reading-attachments="readingAttachments"
+            @remove="removePendingAttachment"
+          />
           <textarea
             ref="composerInput"
             :value="draft"
@@ -465,7 +434,9 @@ defineExpose({ focusInput });
                 ? `composer-reference-option-${activeReferenceIndex}`
                 : undefined
             "
-            :disabled="responding || !runtimeAvailable || voice.active.value"
+            :disabled="
+              !runtimeAvailable || voice.active.value || lockedWhileRunning
+            "
             @blur="closeReferenceMenu"
             @click="updateActiveReference($event.target as HTMLTextAreaElement)"
             @input="handleInput"
@@ -477,7 +448,7 @@ defineExpose({ focusInput });
             :state="voice.state.value"
             :elapsed-ms="voice.elapsedMs.value"
             :levels="voice.levels.value"
-            :send-disabled="responding || !runtimeAvailable"
+            :send-disabled="!runtimeAvailable"
             @cancel="voice.cancel"
             @stop="voice.stop"
             @send="voice.stopAndSend"
@@ -491,7 +462,7 @@ defineExpose({ focusInput });
                 :aria-label="t('uploadAttachment')"
                 :title="t('uploadTXTMDPDFWordDocxOrImages')"
                 :disabled="
-                  responding || !runtimeAvailable || readingAttachments
+                  !runtimeAvailable || readingAttachments || lockedWhileRunning
                 "
                 @click="openAttachmentPicker"
               >
@@ -556,13 +527,13 @@ defineExpose({ focusInput });
                 type="button"
                 :aria-label="t('voiceInput')"
                 :title="t('voiceInput')"
-                :disabled="responding || !runtimeAvailable"
+                :disabled="!runtimeAvailable || lockedWhileRunning"
                 @click="startVoice"
               >
                 <AppIcon name="mic" :size="18" />
               </button>
               <button
-                v-if="!responding"
+                v-if="!responding || (followUps && hasContent)"
                 class="send-button"
                 type="button"
                 :aria-label="t('sendMessage')"

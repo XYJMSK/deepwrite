@@ -130,6 +130,7 @@ export function useRevisionAnalysis(options: {
       changes.value = [];
       comparedText.value = "";
       skillSave.savedKey.value = "";
+      skillSave.savedEntry.value = null;
     },
     setConfiguredModels(next: readonly ModelConfig[], defaultModelId?: string) {
       const available = selectableModels(next);

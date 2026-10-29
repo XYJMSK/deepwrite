@@ -13,7 +13,10 @@ const props = defineProps<{
   controller: RevisionAnalysisController;
   catalogSnapshot: CatalogSnapshot | null;
 }>();
-const emit = defineEmits<{ refreshCatalog: [] }>();
+const emit = defineEmits<{
+  refreshCatalog: [];
+  openEntry: [entry: { libraryId: string; entryId: string }];
+}>();
 const c = props.controller;
 const libraryId = ref("");
 const libraries = computed(() =>
@@ -106,6 +109,13 @@ async function save() {
               : t('revisionAnalysis.createSkillLibraryFirst')
           "
       /></label>
+      <button
+        v-if="saved && c.savedEntry.value"
+        type="button"
+        @click="emit('openEntry', c.savedEntry.value)"
+      >
+        {{ t("analysisUi.goToSavedEntry") }}
+      </button>
       <button
         class="analysis-primary-button"
         :disabled="

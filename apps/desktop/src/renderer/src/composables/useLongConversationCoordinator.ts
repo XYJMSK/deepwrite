@@ -282,6 +282,20 @@ export function useLongConversationCoordinator(
     { flush: "sync" }
   );
 
+  // Queued follow-ups leave through the ordinary send path of the conversation
+  // on screen; one in the background waits until it is shown again.
+  const stopFollowUpDispatch = watch(
+    activeConversation,
+    (conversation, previous) => {
+      if (previous && previous !== conversation)
+        previous.followUps.setDispatcher(null);
+      conversation?.followUps.setDispatcher((attachments) =>
+        sendLongMessage(attachments)
+      );
+    },
+    { immediate: true, flush: "sync" }
+  );
+
   function currentSemanticSignature(): string {
     return activeSemanticSignature.value;
   }
@@ -385,6 +399,7 @@ export function useLongConversationCoordinator(
       currentForeshadowingFocusSignature() ===
         target.foreshadowingFocusSignature &&
       (matchOptions.includeDraft === false ||
+        target.conversation.followUps.dispatching.value ||
         target.conversation.draft.value === target.draft)
     );
   }
@@ -806,6 +821,8 @@ export function useLongConversationCoordinator(
     stopSemanticInvalidation();
     stopConversationError();
     stopWebSearchSync();
+    stopFollowUpDispatch();
+    activeConversation.value?.followUps.setDispatcher(null);
     if (pending && conversation?.isBusy.value) {
       try {
         await conversation.stopGeneration();

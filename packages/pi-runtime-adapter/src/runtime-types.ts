@@ -23,6 +23,7 @@ import type {
   AgentUserInputQuestion,
   AgentUserInputSource,
   SessionUserInputResponsePayload,
+  SteeringAttachmentSummary,
   LibraryAgentProfile,
   LongAgentProfile,
   ScriptWorkspaceAgentProfile,
@@ -256,6 +257,19 @@ export type AgentRuntimeEvent =
         source: AgentUserInputSource;
         questions: AgentUserInputQuestion[];
         draw?: AgentUserInputDraw;
+        runtime: AgentRuntimeRef;
+      };
+    }
+  | {
+      type: "agent.steering_delivered";
+      runId: string;
+      sessionId: string;
+      payload: {
+        messageId: string;
+        steerId: string;
+        content: string;
+        attachments?: SteeringAttachmentSummary[];
+        deliveredAt: string;
         runtime: AgentRuntimeRef;
       };
     }

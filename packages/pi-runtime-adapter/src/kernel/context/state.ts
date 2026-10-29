@@ -29,6 +29,8 @@ export class ConversationContextState {
   readonly runStarts = new WeakMap<AgentMessage, string>();
   readonly runtimeTurns = new WeakMap<AgentMessage, RuntimeUserTurn>();
   readonly pruned = new WeakSet<AgentMessage>();
+  /** User messages injected inside a run (steering); never a run boundary. */
+  readonly midRunMessages = new WeakSet<AgentMessage>();
   /** Provider usage recorded before this time describes a discarded context. */
   compactedAt = 0;
   private fixedContextStale = false;
@@ -47,6 +49,7 @@ export class ConversationContextState {
       const turn = this.runtimeTurns.get(message);
       if (turn) copy.runtimeTurns.set(message, turn);
       if (this.pruned.has(message)) copy.pruned.add(message);
+      if (this.midRunMessages.has(message)) copy.midRunMessages.add(message);
     }
     return copy;
   }
@@ -68,6 +71,7 @@ export class ConversationContextState {
       const turn = copy.runtimeTurns.get(message);
       if (turn) this.runtimeTurns.set(message, turn);
       if (copy.pruned.has(message)) this.pruned.add(message);
+      if (copy.midRunMessages.has(message)) this.midRunMessages.add(message);
     }
   }
 
@@ -86,12 +90,17 @@ export class ConversationContextState {
     return this.runStarts.has(message);
   }
 
+  isMidRunMessage(message: AgentMessage): boolean {
+    return this.midRunMessages.has(message);
+  }
+
   /** Moves bookkeeping to a rewritten copy of the same logical message. */
   transfer(from: AgentMessage, to: AgentMessage): void {
     const runId = this.runStarts.get(from);
     if (runId !== undefined) this.runStarts.set(to, runId);
     const turn = this.runtimeTurns.get(from);
     if (turn) this.runtimeTurns.set(to, { ...turn, snapshot: false });
+    if (this.midRunMessages.has(from)) this.midRunMessages.add(to);
     this.pruned.add(to);
   }
 

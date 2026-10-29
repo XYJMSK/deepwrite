@@ -2,6 +2,7 @@
 import { nextTick, ref, useId, watch } from "vue";
 import { createId } from "@deepwrite/shared";
 import type { LongBookDecompositionProfile } from "@deepwrite/contracts/renderer";
+import { usePresetDraft } from "../analysis-ui/usePresetDraft";
 import PresetManagerShell from "../analysis-ui/PresetManagerShell.vue";
 import { createScopedTranslator } from "../../i18n";
 import { formatError } from "../../i18n/errors";
@@ -16,8 +17,12 @@ const props = defineProps<{
   controller: LongBookDecompositionController;
 }>();
 const emit = defineEmits<{ close: [] }>();
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const draft = ref<LongBookDecompositionProfile[]>([]);
+const { draft, dirty, resetting, reset, snapshot } =
+  usePresetDraft<LongBookDecompositionProfile>({
+    open: () => props.open,
+    presets: () => props.controller.profiles.value,
+    loadDefaults: () => props.controller.loadProfileDefaults()
+  });
 const expandedId = ref<string | null>(null);
 const editorId = useId();
 const saving = ref(false);
@@ -25,7 +30,6 @@ watch(
   () => props.open,
   (open) => {
     if (!open) return;
-    draft.value = clone(props.controller.profiles.value);
     expandedId.value = null;
   },
   { immediate: true }
@@ -59,23 +63,11 @@ function addCategory(profile: LongBookDecompositionProfile): void {
     title: t("categoryTitle")
   });
 }
-async function reset(index: number): Promise<void> {
-  const profile = draft.value[index];
-  if (!profile) return;
-  try {
-    await props.controller.resetProfile(profile.id);
-    const fresh = props.controller.profiles.value.find(
-      ({ id }) => id === profile.id
-    );
-    if (fresh) draft.value[index] = clone(fresh);
-  } catch (error) {
-    uiMessage.error(formatError(error, t("operationFailed")));
-  }
-}
 async function save(): Promise<void> {
+  if (saving.value || resetting.value) return;
   saving.value = true;
   try {
-    await props.controller.saveProfiles(draft.value);
+    await props.controller.saveProfiles(snapshot());
     const { profiles, profileId } = props.controller;
     if (!profiles.value.some(({ id }) => id === profileId.value))
       profileId.value = profiles.value[0]?.id ?? profileId.value;
@@ -90,13 +82,15 @@ async function save(): Promise<void> {
 </script>
 <template>
   <PresetManagerShell
+    :dirty="dirty"
+    :busy="saving || resetting"
     :open="open"
     :title="t('profiles')"
     :description="t('title')"
     :close-label="t('close')"
     @close="emit('close')"
   >
-    <div class="preset-toolbar">
+    <div class="preset-toolbar" :inert="saving || resetting">
       <button
         type="button"
         :disabled="draft.length >= MAX_PROFILES"
@@ -107,7 +101,7 @@ async function save(): Promise<void> {
       <small>{{ t("profileManagerHelp") }}</small>
       <span>{{ draft.length }} / {{ MAX_PROFILES }}</span>
     </div>
-    <div class="preset-list">
+    <div class="preset-list" :inert="saving || resetting">
       <article
         v-for="(profile, index) in draft"
         :key="profile.id"
@@ -147,7 +141,11 @@ async function save(): Promise<void> {
             }}</span>
           </button>
           <div class="preset-card-actions">
-            <button v-if="profile.builtin" type="button" @click="reset(index)">
+            <button
+              v-if="profile.builtin"
+              type="button"
+              @click="reset(profile.id)"
+            >
               {{ t("reset") }}
             </button>
             <button
@@ -229,12 +227,12 @@ async function save(): Promise<void> {
         </div>
       </article>
     </div>
-    <template #footer>
-      <button type="button" @click="emit('close')">{{ t("cancel") }}</button>
+    <template #footer="{ requestClose }">
+      <button type="button" @click="requestClose">{{ t("cancel") }}</button>
       <button
         type="button"
         class="analysis-primary-button"
-        :disabled="saving"
+        :disabled="saving || resetting"
         @click="save"
       >
         {{ saving ? common("saving") : t("save") }}

@@ -1,0 +1,97 @@
+.chat-assistant-composer {
+  container-type: inline-size;
+  position: relative;
+  margin: 0 12px 12px;
+  padding: 10px 12px 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--theme-line);
+  border-radius: 22px;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 7%, transparent);
+}
+.chat-assistant-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  max-height: 150px;
+  resize: none;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.5;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+.chat-assistant-composer textarea::placeholder {
+  color: var(--text-tertiary);
+}
+.chat-assistant-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.chat-assistant-toolbar-spacer {
+  flex: 1;
+}
+.chat-assistant-placeholder-action,
+.chat-assistant-web-search {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 10px;
+  gap: 5px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  white-space: nowrap;
+}
+.chat-assistant-placeholder-action {
+  width: 34px;
+  padding: 0;
+}
+.chat-assistant-web-search:not(:disabled):hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+.chat-assistant-web-search.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.chat-assistant-placeholder-action:disabled,
+.chat-assistant-web-search:disabled {
+  opacity: 0.42;
+}
+.chat-assistant-send {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: var(--surface-main);
+  background: var(--text-primary);
+  border: 0;
+  border-radius: 50%;
+}
+.chat-assistant-send:disabled {
+  opacity: 0.35;
+}
+.chat-assistant-send.is-stop {
+  color: var(--text-primary);
+  background: var(--surface-selected);
+}
+
+.chat-assistant-composer.is-file-drag-over {
+  border-color: var(--accent);
+}
+.chat-assistant-composer :deep(.composer-attachment-list) {
+  max-height: 140px;
+  overflow-y: auto;
+}
+.chat-assistant-placeholder-action:not(:disabled):hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}

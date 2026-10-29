@@ -7,6 +7,7 @@ import { useConversationMessageEditing } from "../composables/useConversationMes
 import { provideConversationDisclosureState } from "../composables/conversationDisclosureState";
 import type { LongWorkspaceIndexSnapshot } from "@deepwrite/contracts";
 import type { LongWorkspaceProposalItem } from "../composables/useLongWorkspaceProposals";
+import type { QueuedComposerMessage } from "../composables/agent-conversation/follow-up-queue";
 import { useConversationSelectionInsertion } from "../composables/useConversationSelectionInsertion";
 import type { AgentWelcomeContent } from "../data/agentWelcome";
 import type {
@@ -16,6 +17,7 @@ import type {
 } from "../types/conversation";
 import AppIcon from "./AppIcon.vue";
 import ConversationMessageItem from "./ConversationMessageItem.vue";
+import ConversationSteeringNote from "./ConversationSteeringNote.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -31,6 +33,8 @@ const props = withDefaults(
       | undefined;
     longProposalItems?: readonly LongWorkspaceProposalItem[];
     longWorkspaceIndex?: LongWorkspaceIndexSnapshot | null;
+    /** Sent while the agent works; each joins the reply once it lands. */
+    pendingMessages?: readonly QueuedComposerMessage[] | undefined;
     welcomeContent?: AgentWelcomeContent;
     showWelcomeDetails?: boolean;
     handleConversationWheel?: (event: WheelEvent) => void;
@@ -44,6 +48,7 @@ const props = withDefaults(
     canRewriteHistory: false,
     longProposalItems: () => [],
     longWorkspaceIndex: null,
+    pendingMessages: () => [],
     showWelcomeDetails: true,
     handleConversationWheel: () => undefined,
     handleConversationScroll: () => undefined,
@@ -167,6 +172,14 @@ const { handleConversationContextMenu } = useConversationSelectionInsertion({
           @cancel-edit="cancelEdit"
         />
       </div>
+      <div v-if="pendingMessages.length" class="conversation-pending-messages">
+        <ConversationSteeringNote
+          v-for="item in pendingMessages"
+          :key="item.id"
+          :content="item.content"
+          :attachments="item.attachments"
+        />
+      </div>
     </div>
   </section>
 </template>
@@ -181,5 +194,9 @@ const { handleConversationContextMenu } = useConversationSelectionInsertion({
 }
 .conversation-message-group.is-deferred:focus-within {
   content-visibility: visible;
+}
+/* Sits where the reply's next step will appear, so landing does not jump. */
+.conversation-pending-messages {
+  margin-top: -42px;
 }
 </style>

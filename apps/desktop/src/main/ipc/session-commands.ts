@@ -5,8 +5,6 @@ import { prepareLibraryManagementRunContext } from "../library-management-run-co
 import { prepareMaterialRunContext } from "../material-run-context";
 import {
   CommandEnvelopeSchema,
-  SessionAbortAcceptedPayloadSchema,
-  SessionUserInputResponseAcceptedPayloadSchema,
   SessionPromptAcceptedPayloadSchema,
   createEnvelope,
   conversationPromptBudgetError,
@@ -23,6 +21,7 @@ import { createUsageRunContext } from "../usage-observation";
 import { usageModuleForPrompt } from "../usage-module";
 import { safeErrorDetails } from "./errors";
 import type { IpcCommandContext } from "./command-types";
+import { handleSessionRunControlCommands } from "./session-run-control-commands";
 
 export async function handleSessionCommands(
   ctx: Pick<
@@ -41,102 +40,8 @@ export async function handleSessionCommands(
   >,
   command: CommandEnvelope
 ): Promise<CommandResult | undefined> {
-  if (command.type === "session.user_input_response") {
-    try {
-      // activeRuns is a Main-side event-stream mirror and can briefly lag the
-      // Agent utility that owns the pending question. Forward the response to
-      // that authoritative owner; it validates sessionId, runId, requestId and
-      // every answer before resolving the waiting tool call.
-      const internalCommand = CommandEnvelopeSchema.parse(
-        createEnvelope("agent.user_input_response", command.payload, {
-          id: command.id,
-          context: command.context
-        })
-      );
-      const result = await ctx.supervisor.requestCommand(
-        "agent",
-        internalCommand,
-        10_000
-      );
-      if (result.status !== "accepted") return result;
-      const accepted = SessionUserInputResponseAcceptedPayloadSchema.parse(
-        result.payload
-      );
-      if (
-        accepted.sessionId !== command.payload.sessionId ||
-        accepted.runId !== command.payload.runId ||
-        accepted.requestId !== command.payload.requestId
-      ) {
-        return {
-          status: "rejected",
-          requestId: command.id,
-          error: {
-            code: "ipc.invalid_agent_user_input_result",
-            message: "Agent user-input result does not match the request."
-          }
-        };
-      }
-      return { status: "accepted", requestId: command.id, payload: accepted };
-    } catch (error: unknown) {
-      return {
-        status: "rejected",
-        requestId: command.id,
-        error: {
-          code: "ipc.agent_user_input_failed",
-          message:
-            error instanceof Error ? error.message : "提交用户回答失败。",
-          details: safeErrorDetails(error)
-        }
-      };
-    }
-  }
-
-  if (command.type === "session.abort") {
-    try {
-      const internalCommand = CommandEnvelopeSchema.parse(
-        createEnvelope("agent.abort", command.payload, {
-          id: command.id,
-          context: command.context
-        })
-      );
-      const result = await ctx.supervisor.requestCommand(
-        "agent",
-        internalCommand,
-        10_000
-      );
-      if (result.status === "accepted") {
-        const accepted = SessionAbortAcceptedPayloadSchema.parse(
-          result.payload
-        );
-        if (
-          accepted.sessionId !== command.payload.sessionId ||
-          accepted.runId !== command.payload.runId
-        ) {
-          return {
-            status: "rejected",
-            requestId: command.id,
-            error: {
-              code: "ipc.invalid_agent_abort_result",
-              message: "Agent abort result does not match the requested run."
-            }
-          };
-        }
-        return { status: "accepted", requestId: command.id, payload: accepted };
-      }
-      return result;
-    } catch (error: unknown) {
-      return {
-        status: "rejected",
-        requestId: command.id,
-        error: {
-          code: "ipc.agent_abort_failed",
-          message:
-            error instanceof Error ? error.message : "Agent abort failed.",
-          details: safeErrorDetails(error)
-        }
-      };
-    }
-  }
+  const runControl = await handleSessionRunControlCommands(ctx, command);
+  if (runControl) return runControl;
 
   if (command.type === "session.prompt") {
     const ownerId = createId("prompt");

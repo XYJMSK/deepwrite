@@ -107,9 +107,18 @@ export class ExtrasAgentConfigStore {
 
   async reset(
     agentId: ExtrasAgentId,
-    profileId?: string
+    profileId?: string,
+    previewOnly = false
   ): Promise<ExtrasAgentSettings> {
     const catalog = this.catalog(agentId);
+    if (previewOnly) {
+      const profiles = catalog.defaults.filter(
+        (profile) => !profileId || profile.id === profileId
+      );
+      if (!profiles.length)
+        throw new Error("该自定义预设没有可恢复的默认版本。");
+      return this.publicSettings(agentId, { version: 1, profiles });
+    }
     return this.enqueue(agentId, async () => {
       if (!profileId) {
         return {

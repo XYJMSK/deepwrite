@@ -21,6 +21,7 @@ import DecompositionTaskBar from "./DecompositionTaskBar.vue";
 import DecompositionDialog from "./DecompositionDialog.vue";
 import DecompositionRecordDialog from "./DecompositionRecordDialog.vue";
 import DecompositionRefreshButton from "./DecompositionRefreshButton.vue";
+import DecompositionNotice from "./DecompositionNotice.vue";
 import type { LongBookDecompositionController } from "./useLongBookDecomposition";
 import { createScopedTranslator } from "../../i18n";
 import { getErrorPayload } from "../../i18n/errors";
@@ -133,8 +134,10 @@ onMounted(() => {
           :disabled="controller.isBusy.value || busy"
           @click="refresh"
         />
+        <DecompositionNotice />
       </AnalysisSourceControls>
       <div v-else class="analysis-header-actions">
+        <DecompositionNotice />
         <DecompositionRefreshButton
           :disabled="controller.isBusy.value || busy"
           @click="refresh"
